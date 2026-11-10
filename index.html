@@ -48,16 +48,16 @@ small{color:#8b949e}
 <script>
 /* ===== إعدادات صاحب الموقع ===== */
 const SUB_ENDPOINT = "https://formspree.io/f/YOUR_FORM_ID"; // ضع رابط Formspree هنا لتصلك الإيميلات
-const ACTIVE = {  // المشتركين المفعّلين: "email":"تاريخ الانتهاء"
-  "test@example.com":"2030-01-01"
-};
+let SUBS={}; // يُحمَّل من subscribers.json (تديره من لوحة الأدمن)
+fetch("subscribers.json?t="+Date.now()).then(r=>r.json()).then(j=>SUBS=j).catch(()=>{});
+const sha=async t=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)))].map(x=>x.toString(16).padStart(2,"0")).join("");
 const SYMBOL="PAXGUSDT"; // PAXG مربوط بسعر الذهب (بديل مجاني للسعر الحي)
 /* ================================= */
 const $=id=>document.getElementById(id);
 const TFS={ "1m":["1m",60],"5m":["5m",300],"15m":["15m",900],"1h":["1h",3600]};
 const FREE=["1h"]; let tf="1h", tool=null, drawings=[], cur=null, ws, data=[], loading=false;
 const yearAgo=()=>Date.now()/1000-365*86400;
-const isSub=()=>{const e=localStorage.ab_email;return e&&ACTIVE[e]&&new Date(ACTIVE[e])>new Date()};
+const isSub=()=>{const h=localStorage.ab_h,x=SUBS[h];return !!(h&&x&&new Date(x.exp)>new Date())};
 
 const chart=LightweightCharts.createChart($("chart"),{layout:{background:{color:"#0d1117"},textColor:"#c9d1d9"},grid:{vertLines:{color:"#1c2128"},horzLines:{color:"#1c2128"}},timeScale:{timeVisible:true,rightOffset:5},crosshair:{mode:0}});
 const series=chart.addCandlestickSeries({upColor:"#26a69a",downColor:"#ef5350",borderVisible:false,wickUpColor:"#26a69a",wickDownColor:"#ef5350"});
@@ -112,8 +112,9 @@ $("send").onclick=async()=>{
  try{await fetch(SUB_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({email:e,plan:"monthly"})});
  $("msg").textContent="✅ تم إرسال طلبك، سيتم تفعيل اشتراكك قريباً"}catch(x){$("msg").textContent="تعذر الإرسال"}
 };
-$("login").onclick=()=>{const e=$("em").value.trim().toLowerCase();
- if(ACTIVE[e]&&new Date(ACTIVE[e])>new Date()){localStorage.ab_email=e;m.style.display="none";$("lock").style.display="none";alert("تم تفعيل اشتراكك ✅")}
+$("login").onclick=async()=>{const h=await sha($("em").value.trim().toLowerCase());
+ try{SUBS=await (await fetch("subscribers.json?t="+Date.now())).json()}catch(e){}
+ if(SUBS[h]&&new Date(SUBS[h].exp)>new Date()){localStorage.ab_h=h;m.style.display="none";$("lock").style.display="none";alert("تم تفعيل اشتراكك ✅")}
  else $("msg").textContent="هذا البريد غير مفعّل أو منتهي"};
 
 /* ===== الرسم ===== */
