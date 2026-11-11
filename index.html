@@ -71,24 +71,38 @@ const series=chart.addCandlestickSeries({upColor:"#26a69a",downColor:"#ef5350",b
 new ResizeObserver(()=>{chart.resize($("wrap").clientWidth,$("wrap").clientHeight);size();draw()}).observe($("wrap"));
 
 /* ===== البيانات ===== */
-const HOSTS=["https://data-api.binance.vision","https://api.binance.com","https://api1.binance.com","https://api.binance.us"];
-async function kl(end){
+const IV={by:{"1m":"1","5m":"5","15m":"15","1h":"60"},kr:{"1m":1,"5m":5,"15m":15,"1h":60}};
+const BN=["https://data-api.binance.vision","https://api.binance.com","https://api1.binance.com"];
+const PROV=[
+ {n:"Bybit",f:async(tf,end,lim)=>{
+  const j=await(await fetch(`https://api.bybit.com/v5/market/kline?category=linear&symbol=XAUUSDT&interval=${IV.by[tf]}&limit=${lim}`+(end?`&end=${end}`:""))).json();
+  if(j.retCode!==0)throw new Error(j.retMsg);
+  return j.result.list.map(k=>({time:+k[0]/1000,open:+k[1],high:+k[2],low:+k[3],close:+k[4]})).reverse()}},
+ {n:"Binance",f:async(tf,end,lim)=>{let err;
+  for(const h of BN){try{const r=await fetch(`${h}/api/v3/klines?symbol=${SYMBOL}&interval=${TFS[tf][0]}&limit=${lim}`+(end?`&endTime=${end}`:""));
+   const j=await r.json();if(!Array.isArray(j))throw new Error(j.msg||"bad");
+   return j.map(k=>({time:k[0]/1000,open:+k[1],high:+k[2],low:+k[3],close:+k[4]}))}catch(e){err=e}}throw err}},
+ {n:"Kraken",f:async(tf,end,lim)=>{
+  if(end)return [];
+  const j=await(await fetch(`https://api.kraken.com/0/public/OHLC?pair=PAXGUSD&interval=${IV.kr[tf]}`)).json();
+  if(j.error&&j.error.length)throw new Error(j.error[0]);
+  const k=Object.values(j.result).find(Array.isArray);
+  return k.map(x=>({time:+x[0],open:+x[1],high:+x[2],low:+x[3],close:+x[4]}))}}
+];
+let cur2=0;
+async function kl(end,lim=1000){
+ if(end)return PROV[cur2].f(tf,end,lim);
  let err;
- for(const h of HOSTS){
-  try{
-   const u=`${h}/api/v3/klines?symbol=${h.includes(".us")?"PAXGUSD":SYMBOL}&interval=${TFS[tf][0]}&limit=1000`+(end?`&endTime=${end}`:"");
-   const r=await fetch(u);if(!r.ok)throw new Error("HTTP "+r.status);
-   const j=await r.json();if(!Array.isArray(j))throw new Error(j.msg||"bad data");
-   return j.map(k=>({time:k[0]/1000,open:+k[1],high:+k[2],low:+k[3],close:+k[4]}));
-  }catch(e){err=e}
- }
- throw err;
+ for(let i=0;i<PROV.length;i++){const p=(cur2+i)%PROV.length;
+  try{const d=await PROV[p].f(tf,0,lim);if(d.length){cur2=p;return d}}catch(e){err=e}}
+ throw err||new Error("no data");
 }
 async function load(){
- $("px").textContent="جاري التحميل...";data=[];ws&&ws.close();const mine=tf;
+ $("px").textContent="جاري التحميل...";data=[];clearInterval(timer);const mine=tf;
  try{data=await kl();}catch(e){$("px").textContent="تعذر جلب الأسعار: "+e.message;return}
  if(mine!==tf)return;
- series.setData(data);chart.timeScale().scrollToRealTime();live();
+ series.setData(data);chart.timeScale().scrollToRealTime();
+ $("px").textContent=data[data.length-1].close.toFixed(2);live();
 }
 async function more(){
  if(loading||!data.length||data[0].time<yearAgo())return;loading=true;
@@ -98,10 +112,13 @@ async function more(){
  }catch(e){}loading=false;
 }
 chart.timeScale().subscribeVisibleLogicalRangeChange(r=>{if(r&&r.from<40)more();draw()});
+let timer;
 function live(){
- ws=new WebSocket(`wss://data-stream.binance.vision/ws/${SYMBOL.toLowerCase()}@kline_${TFS[tf][0]}`);
- ws.onmessage=e=>{const k=JSON.parse(e.data).k;const c={time:k.t/1000,open:+k.o,high:+k.h,low:+k.l,close:+k.c};
-  series.update(c);$("px").textContent=c.close.toFixed(2);};
+ clearInterval(timer);const mine=tf;
+ timer=setInterval(async()=>{try{
+  const c=await PROV[cur2].f(tf,0,2);if(mine!==tf||!c.length)return;
+  const x=c[c.length-1];series.update(x);$("px").textContent=x.close.toFixed(2);
+ }catch(e){}},2000);
 }
 
 /* ===== واجهة ===== */
