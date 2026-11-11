@@ -54,6 +54,9 @@ const sha=async t=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",new T
 const SYMBOL="PAXGUSDT"; // PAXG مربوط بسعر الذهب (بديل مجاني للسعر الحي)
 /* ================================= */
 const $=id=>document.getElementById(id);
+function openSub(){$("m").style.display="flex"}
+$("subBtn").onclick=openSub;
+window.onerror=(e)=>{$("px").textContent="خطأ: "+e};
 const TFS={ "1m":["1m",60],"5m":["5m",300],"15m":["15m",900],"1h":["1h",3600]};
 const FREE=["1h"]; let tf="1h", tool=null, drawings=[], cur=null, ws, data=[], loading=false;
 const yearAgo=()=>Date.now()/1000-365*86400;
@@ -106,7 +109,7 @@ function pick(id){
  document.querySelectorAll("#tools button").forEach(b=>b.classList.toggle("on",b.id==="t"+tool));
  $("ov").classList.toggle("act",!!tool);
 }
-function openSub(){m.style.display="flex"}$("subBtn").onclick=openSub;
+
 $("send").onclick=async()=>{
  const e=$("em").value.trim();if(!/^\S+@\S+\.\S+$/.test(e)){$("msg").textContent="بريد غير صحيح";return}
  try{await fetch(SUB_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({email:e,plan:"monthly"})});
@@ -114,7 +117,7 @@ $("send").onclick=async()=>{
 };
 $("login").onclick=async()=>{const h=await sha($("em").value.trim().toLowerCase());
  try{SUBS=await (await fetch("subscribers.json?t="+Date.now())).json()}catch(e){}
- if(SUBS[h]&&new Date(SUBS[h].exp)>new Date()){localStorage.ab_h=h;m.style.display="none";$("lock").style.display="none";alert("تم تفعيل اشتراكك ✅")}
+ if(SUBS[h]&&new Date(SUBS[h].exp)>new Date()){localStorage.ab_h=h;$("m").style.display="none";$("lock").style.display="none";alert("تم تفعيل اشتراكك ✅")}
  else $("msg").textContent="هذا البريد غير مفعّل أو منتهي"};
 
 /* ===== الرسم ===== */
