@@ -18,8 +18,8 @@ button{background:#21262d;color:var(--t);border:1px solid var(--b);border-radius
 button.on{background:var(--g);color:#000;border-color:var(--g)}
 .bar{display:flex;flex-wrap:wrap;gap:6px;padding:6px 12px;background:var(--p);border-bottom:1px solid var(--b)}
 #wrap{position:relative;flex:1;min-height:300px;direction:ltr}
-#chart,#ov{position:absolute;inset:0}#ov{pointer-events:none}
-#ov.act{pointer-events:auto;cursor:crosshair}
+#chart,#ov{position:absolute;left:0;top:0;width:100%;height:100%}#ov{pointer-events:none}
+#ov.act{pointer-events:auto;cursor:crosshair;touch-action:none}
 .lock{position:absolute;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:5;text-align:center;padding:20px}
 .modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:9}
 .modal>div{background:var(--p);border:1px solid var(--b);padding:20px;border-radius:10px;width:min(360px,92vw)}
@@ -172,7 +172,7 @@ const X=t=>chart.timeScale().timeToCoordinate(t), Y=p=>series.priceToCoordinate(
 function save(){localStorage.ab_dr=JSON.stringify(drawings)}
 try{drawings=JSON.parse(localStorage.ab_dr||"[]")}catch(e){}
 const need=id=>TOOLS.find(t=>t[0]===id)[2];
-cv.addEventListener("click",e=>{
+cv.addEventListener("pointerup",e=>{
  if(!tool)return;const r=cv.getBoundingClientRect();
  const t=chart.timeScale().coordinateToTime(e.clientX-r.left)??data[data.length-1].time;
  const p=series.coordinateToPrice(e.clientY-r.top);
