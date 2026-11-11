@@ -29,7 +29,7 @@ small{color:#8b949e}
 </head>
 <body>
 <header>
- <span class="logo">Abd-Afx-chart</span><span>XAU/USD</span>
+ <span class="logo">Abd-Afx-chart</span><small>v5</small><span>XAU/USD</span>
  <span class="price" id="px">--</span>
  <button id="subBtn" class="on">اشتراك شهري</button>
 </header>
@@ -168,18 +168,32 @@ $("login").onclick=async()=>{const h=await sha($("em").value.trim().toLowerCase(
 /* ===== الرسم ===== */
 const cv=$("ov"),cx=cv.getContext("2d");
 function size(){const w=$("wrap"),d=devicePixelRatio||1;cv.width=w.clientWidth*d;cv.height=w.clientHeight*d;cx.setTransform(d,0,0,d,0,0)}
-const X=t=>chart.timeScale().timeToCoordinate(t), Y=p=>series.priceToCoordinate(p);
+function t2x(t){
+ const n=data.length;if(!n)return null;const sec=TFS[tf][1];let idx;
+ if(t>=data[n-1].time)idx=n-1+(t-data[n-1].time)/sec;
+ else if(t<=data[0].time)idx=(t-data[0].time)/sec;
+ else{let lo=0,hi=n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(data[m].time<=t)lo=m;else hi=m}
+  idx=lo+(t-data[lo].time)/((data[hi].time-data[lo].time)||1)}
+ return chart.timeScale().logicalToCoordinate(idx);
+}
+function x2t(x){
+ const L=chart.timeScale().coordinateToLogical(x),n=data.length;if(L==null||!n)return null;const sec=TFS[tf][1];
+ if(L>=n-1)return data[n-1].time+(L-(n-1))*sec;
+ if(L<=0)return data[0].time+L*sec;
+ const i=Math.floor(L);return data[i].time+(data[i+1].time-data[i].time)*(L-i);
+}
+const X=t=>t2x(t), Y=p=>series.priceToCoordinate(p);
 function save(){localStorage.ab_dr=JSON.stringify(drawings)}
 try{drawings=JSON.parse(localStorage.ab_dr||"[]")}catch(e){}
 const need=id=>TOOLS.find(t=>t[0]===id)[2];
-cv.addEventListener("pointerup",e=>{
+cv.addEventListener("pointerup",e=>{try{
  if(!tool)return;const r=cv.getBoundingClientRect();
- const t=chart.timeScale().coordinateToTime(e.clientX-r.left)??data[data.length-1].time;
+ const t=x2t(e.clientX-r.left)??data[data.length-1].time;
  const p=series.coordinateToPrice(e.clientY-r.top);
  cur=cur||{type:tool,pts:[]};cur.pts.push({t,p});
- if(cur.pts.length>=need(tool)){drawings.push(cur);cur=null;save()}draw();
+ if(cur.pts.length>=need(tool)){drawings.push(cur);cur=null;save()}draw()}catch(x){alert("خطأ رسم: "+x.message)}
 });
-cv.addEventListener("mousemove",e=>{if(cur){const r=cv.getBoundingClientRect();cur.hover={t:chart.timeScale().coordinateToTime(e.clientX-r.left),p:series.coordinateToPrice(e.clientY-r.top)};draw()}});
+cv.addEventListener("mousemove",e=>{if(cur){const r=cv.getBoundingClientRect();cur.hover={t:x2t(e.clientX-r.left),p:series.coordinateToPrice(e.clientY-r.top)};draw()}});
 const W=()=>cv.clientWidth;
 function shape(d){
  const pts=d.hover&&d.pts.length<need(d.type)?d.pts.concat(d.hover):d.pts;
