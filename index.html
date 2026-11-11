@@ -71,14 +71,22 @@ const series=chart.addCandlestickSeries({upColor:"#26a69a",downColor:"#ef5350",b
 new ResizeObserver(()=>{chart.resize($("wrap").clientWidth,$("wrap").clientHeight);size();draw()}).observe($("wrap"));
 
 /* ===== البيانات ===== */
+const HOSTS=["https://data-api.binance.vision","https://api.binance.com","https://api1.binance.com","https://api.binance.us"];
 async function kl(end){
- const u=`https://api.binance.com/api/v3/klines?symbol=${SYMBOL}&interval=${TFS[tf][0]}&limit=1000`+(end?`&endTime=${end}`:"");
- const r=await (await fetch(u)).json();
- return r.map(k=>({time:k[0]/1000,open:+k[1],high:+k[2],low:+k[3],close:+k[4]}));
+ let err;
+ for(const h of HOSTS){
+  try{
+   const u=`${h}/api/v3/klines?symbol=${h.includes(".us")?"PAXGUSD":SYMBOL}&interval=${TFS[tf][0]}&limit=1000`+(end?`&endTime=${end}`:"");
+   const r=await fetch(u);if(!r.ok)throw new Error("HTTP "+r.status);
+   const j=await r.json();if(!Array.isArray(j))throw new Error(j.msg||"bad data");
+   return j.map(k=>({time:k[0]/1000,open:+k[1],high:+k[2],low:+k[3],close:+k[4]}));
+  }catch(e){err=e}
+ }
+ throw err;
 }
 async function load(){
- data=[];ws&&ws.close();const mine=tf;
- try{data=await kl();}catch(e){$("px").textContent="خطأ في جلب الأسعار";return}
+ $("px").textContent="جاري التحميل...";data=[];ws&&ws.close();const mine=tf;
+ try{data=await kl();}catch(e){$("px").textContent="تعذر جلب الأسعار: "+e.message;return}
  if(mine!==tf)return;
  series.setData(data);chart.timeScale().scrollToRealTime();live();
 }
@@ -91,7 +99,7 @@ async function more(){
 }
 chart.timeScale().subscribeVisibleLogicalRangeChange(r=>{if(r&&r.from<40)more();draw()});
 function live(){
- ws=new WebSocket(`wss://stream.binance.com:9443/ws/${SYMBOL.toLowerCase()}@kline_${TFS[tf][0]}`);
+ ws=new WebSocket(`wss://data-stream.binance.vision/ws/${SYMBOL.toLowerCase()}@kline_${TFS[tf][0]}`);
  ws.onmessage=e=>{const k=JSON.parse(e.data).k;const c={time:k.t/1000,open:+k.o,high:+k.h,low:+k.l,close:+k.c};
   series.update(c);$("px").textContent=c.close.toFixed(2);};
 }
