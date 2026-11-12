@@ -29,7 +29,7 @@ small{color:#8b949e}
 </head>
 <body>
 <header>
- <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v10</small><span>XAU/USD</span>
+ <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v11</small><span>XAU/USD</span>
  <span class="price" id="px">--</span>
  <button id="subBtn" class="on">اشتراك شهري</button>
 </header>
@@ -61,6 +61,7 @@ const $=id=>document.getElementById(id);
 function openSub(){$("m").style.display="flex"}
 $("subBtn").onclick=openSub;
 window.onerror=(e)=>{$("px").textContent="خطأ: "+e};
+if(location.hash==="#login")openSub();
 const TFS={ "1m":["1m",60],"5m":["5m",300],"15m":["15m",900],"1h":["1h",3600]};
 const FREE=["1h"]; let tf="1h", tool=null, drawings=[], cur=null, ws, data=[], loading=false;
 const yearAgo=()=>Date.now()/1000-365*86400;

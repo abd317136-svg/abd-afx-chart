@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Afx-DrAlan-chart-created-by-Abd⚜️ | Admin</title>
 <style>body{background:#0d1117;color:#e6edf3;font-family:system-ui,Tahoma;margin:0;padding:16px;max-width:560px;margin:auto}
+textarea{width:100%;padding:10px;margin:4px 0;border-radius:6px;border:1px solid #30363d;background:#161b22;color:#e6edf3;font-size:15px;box-sizing:border-box}
 input,button{padding:10px;margin:4px 0;border-radius:6px;border:1px solid #30363d;background:#161b22;color:#e6edf3;width:100%;font-size:15px}
 button{background:#d4af37;color:#000;font-weight:700;cursor:pointer}button.d{background:#da3633;color:#fff;width:auto;padding:5px 10px}
 .r{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #30363d;padding:8px 0}small{color:#8b949e}h2{color:#d4af37}</style></head>
@@ -13,9 +14,11 @@ button{background:#d4af37;color:#000;font-weight:700;cursor:pointer}button.d{bac
  <button onclick="login()">دخول</button>
 </div>
 <div id="a2" style="display:none">
- <h3>تفعيل مشترك</h3>
- <input id="em" type="email" dir="ltr" placeholder="إيميل المشترك">
- <input id="nt" placeholder="ملاحظة (اسمه أو رقمه) - اختياري">
+ <h3>رابط المشتركين</h3>
+ <input id="lk" readonly dir="ltr" value="https://abd317136-svg.github.io/abd-afx-chart/#login">
+ <button onclick="navigator.clipboard.writeText($('lk').value);this.textContent='✅ تم النسخ'">نسخ الرابط</button>
+ <h3>تفعيل مشتركين</h3>
+ <textarea id="em" rows="5" dir="ltr" placeholder="ضع الإيميلات هنا، كل إيميل بسطر&#10;ahmed@mail.com&#10;sara@mail.com  ملاحظة اختيارية (اسمه)"></textarea>
  <input id="dy" type="number" value="30" placeholder="عدد الأيام">
  <button onclick="add()">تفعيل / تمديد</button>
  <p id="msg"></p>
@@ -52,12 +55,17 @@ function show(){
 }
 async function login(){localStorage.ab_tk=$("tk").value.trim();try{await load()}catch(e){alert(e.message);localStorage.removeItem("ab_tk")}}
 async function add(){
- const e=$("em").value.trim().toLowerCase();if(!e)return;
- const h=await hash(e),days=+$("dy").value||30;
- let base=new Date();if(data[h]&&new Date(data[h].exp)>base)base=new Date(data[h].exp);
- base.setDate(base.getDate()+days);
- data[h]={exp:base.toISOString().slice(0,10),note:$("nt").value||(data[h]&&data[h].note)||""};
- try{await save("activate");$("msg").textContent="✅ تم التفعيل، بيشتغل خلال دقيقة";$("em").value=$("nt").value=""}catch(x){$("msg").textContent=x.message}
+ const days=+$("dy").value||30;let n=0,bad=0;
+ for(const ln of $("em").value.split(/\n/).map(x=>x.trim()).filter(Boolean)){
+  const ems=ln.match(/[^\s,;]+@[^\s,;]+\.[^\s,;]+/g);if(!ems){bad++;continue}
+  const note=ems.length===1?ln.replace(ems[0],"").replace(/^[\s,;\-]+/,"").trim():"";
+  for(const e0 of ems){const h=await hash(e0.toLowerCase());
+   let base=new Date();if(data[h]&&new Date(data[h].exp)>base)base=new Date(data[h].exp);
+   base.setDate(base.getDate()+days);
+   data[h]={exp:base.toISOString().slice(0,10),note:note||(data[h]&&data[h].note)||""};n++}
+ }
+ if(!n){$("msg").textContent="ما لقيت إيميل صحيح";return}
+ try{await save("activate");$("msg").textContent="✅ تم تفعيل "+n+" مشترك"+(bad?" (تجاهلت "+bad+" سطر غير صحيح)":"");$("em").value=""}catch(x){$("msg").textContent=x.message}
 }
 function logout(){localStorage.removeItem("ab_tk");location.reload()}
 if(localStorage.ab_tk)load().catch(()=>localStorage.removeItem("ab_tk"));
