@@ -22,6 +22,7 @@ button.on{background:var(--g);color:#000;border-color:var(--g)}
 #ov.act{pointer-events:auto;cursor:crosshair;touch-action:none}
 .lock{position:absolute;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:20;text-align:center;padding:20px}
 .modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:30}
+.modal.gate{background:#0d1117;z-index:60}.modal.gate .x{display:none}
 .modal>div{background:var(--p);border:1px solid var(--b);padding:20px;border-radius:10px;width:min(360px,92vw)}
 input{width:100%;padding:9px;margin:8px 0;background:var(--bg);color:var(--t);border:1px solid var(--b);border-radius:6px}
 small{color:#8b949e}
@@ -29,7 +30,7 @@ small{color:#8b949e}
 </head>
 <body>
 <header>
- <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v12</small><span>XAU/USD</span>
+ <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v14</small><span>XAU/USD</span>
  <span class="price" id="px">--</span>
  <button id="subBtn" class="on">اشتراك شهري</button>
  <button id="admUsers" style="display:none">👥 المشتركين</button><button id="admOut" style="display:none">خروج الأدمن</button>
@@ -43,7 +44,7 @@ small{color:#8b949e}
 <div class="modal" id="am"><div>
  <h3 style="margin:0">دخول الأدمن</h3><small>الصق الـ Token تبعك</small>
  <input id="amTk" type="password" dir="ltr" placeholder="github_pat_...">
- <button class="on" id="amGo">دخول</button> <button onclick="$('am').style.display='none'">إغلاق</button><p id="amMsg"></p>
+ <button class="on" id="amGo">دخول</button> <button class="x" onclick="$('am').style.display='none'">إغلاق</button><p id="amMsg"></p>
 </div></div>
 <div id="sm" style="display:none;position:fixed;inset:0;background:#0d1117;z-index:40">
  <button onclick="$('sm').style.display='none'" style="position:absolute;top:8px;left:8px;z-index:2">✖ إغلاق</button>
@@ -53,7 +54,7 @@ small{color:#8b949e}
  <h3 style="margin:0">الاشتراك الشهري</h3>
  <small>أدخل بريدك. بعد الدفع/التواصل يتم تفعيل اشتراكك يدوياً. إذا كنت مفعّل اكتب بريدك واضغط «دخول».</small>
  <input id="em" type="email" placeholder="you@email.com" dir="ltr">
- <button class="on" id="send">طلب اشتراك</button> <button id="login">دخول</button> <button onclick="m.style.display='none'">إغلاق</button>
+ <button class="on" id="send">طلب اشتراك</button> <button id="login">دخول</button> <button class="x" onclick="$('m').style.display='none'">إغلاق</button>
  <p id="msg"></p>
 </div></div>
 
@@ -61,7 +62,7 @@ small{color:#8b949e}
 /* ===== إعدادات صاحب الموقع ===== */
 const SUB_ENDPOINT = "https://formspree.io/f/YOUR_FORM_ID"; // ضع رابط Formspree هنا لتصلك الإيميلات
 let SUBS={}; // يُحمَّل من subscribers.json (تديره من لوحة الأدمن)
-fetch("subscribers.json?t="+Date.now()).then(r=>r.json()).then(j=>SUBS=j).catch(()=>{});
+fetch("subscribers.json?t="+Date.now()).then(r=>r.json()).then(j=>{SUBS=j;gate()}).catch(()=>{});
 const sha=async t=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)))].map(x=>x.toString(16).padStart(2,"0")).join("");
 let PUB=[];
 fetch("drawings.json?t="+Date.now()).then(r=>r.json()).then(j=>{PUB=j;if(localStorage.ab_tk&&!drawings.length)drawings=j;draw()}).catch(()=>{});
@@ -75,7 +76,7 @@ if(location.hash==="#login")openSub();
 if(localStorage.ab_tk){$("admUsers").style.display=$("admOut").style.display=""}
 $("admUsers").onclick=()=>{$("sf").src="admin.html";$("sm").style.display="block"};
 $("admOut").onclick=()=>{localStorage.removeItem("ab_tk");location.hash="";location.reload()};
-if(location.hash==="#admin"&&!localStorage.ab_tk)$("am").style.display="flex";
+if(location.hash==="#admin"&&!localStorage.ab_tk){$("am").classList.add("gate");$("am").style.display="flex"}
 $("amGo").onclick=async()=>{const t=$("amTk").value.trim();
  try{const r=await fetch("https://api.github.com/repos/abd317136-svg/abd-afx-chart/contents/subscribers.json",{headers:{Authorization:"Bearer "+t,Accept:"application/vnd.github+json"}});
   if(!r.ok)throw 0;localStorage.ab_tk=t;location.hash="";location.reload()}catch(e){$("amMsg").textContent="Token غير صحيح"}};
@@ -171,7 +172,7 @@ async function publish(){
  alert(r.ok?"✅ تم النشر، بيظهر للجميع خلال دقيقة":"فشل النشر ("+r.status+")")}catch(e){alert("فشل النشر")}
 }
 function pick(id){
- if(!isSub()){$("lock").style.display="flex";return}
+ if(!localStorage.ab_tk)return;
  tool=tool===id?null:id;cur=null;
  document.querySelectorAll("#tools button[id^=t]:not(#tpan)").forEach(b=>b.classList.toggle("on",b.id==="t"+tool));
  setPan(false);
@@ -184,7 +185,7 @@ $("send").onclick=async()=>{
 };
 $("login").onclick=async()=>{const h=await sha($("em").value.trim().toLowerCase());
  try{SUBS=await (await fetch("subscribers.json?t="+Date.now())).json()}catch(e){}
- if(SUBS[h]&&new Date(SUBS[h].exp)>new Date()){localStorage.ab_h=h;$("m").style.display="none";$("lock").style.display="none";alert("تم تفعيل اشتراكك ✅")}
+ if(SUBS[h]&&new Date(SUBS[h].exp)>new Date()){localStorage.ab_h=h;gate();$("m").style.display="none";$("lock").style.display="none";alert("تم تفعيل اشتراكك ✅")}
  else $("msg").textContent="هذا البريد غير مفعّل أو منتهي"};
 
 /* ===== الرسم ===== */
@@ -239,7 +240,7 @@ function shape0(d){
    cx.fillStyle="#ffb300";cx.fillText(`${l} (${pr.toFixed(2)})`,x1+4,y-3)});}
 }
 function line(a,b,c,d){cx.beginPath();cx.moveTo(a,b);cx.lineTo(c,d);cx.stroke()}
-function draw(){cx.clearRect(0,0,cv.width,cv.height);cx.font="11px sans-serif";if(localStorage.ab_tk)drawings.forEach(shape);else{PUB.forEach(shape);drawings.forEach(shape)}if(cur)shape(cur)}
+function draw(){cx.clearRect(0,0,cv.width,cv.height);cx.font="11px sans-serif";if(localStorage.ab_tk)drawings.forEach(shape);else PUB.forEach(shape);if(cur)shape(cur)}
 chart.timeScale().subscribeVisibleTimeRangeChange(draw);
 $("wrap").addEventListener("wheel",()=>requestAnimationFrame(draw));
 let sel=null,drag=null;
@@ -265,7 +266,7 @@ function hitTest(x,y){
 }
 const wrapEl=$("wrap");
 function xy(e){const t=(e.touches&&e.touches[0])||e,r=wrapEl.getBoundingClientRect();return{x:t.clientX-r.left,y:t.clientY-r.top}}
-const idle=()=>!(tool&&!pan)&&!cur;
+const idle=()=>!!localStorage.ab_tk&&!(tool&&!pan)&&!cur;
 function setPt(q,x,y,onlyY){const p=series.coordinateToPrice(y);if(p!=null)q.p=p;if(!onlyY){const t=x2t(x);if(t!=null)q.t=t}}
 wrapEl.addEventListener("pointerdown",e=>{
  if(!idle())return;const c=xy(e),h=hitTest(c.x,c.y);
@@ -286,6 +287,12 @@ const endDrag=()=>{if(drag){drag=null;save()}};
 window.addEventListener("pointerup",endDrag);window.addEventListener("pointercancel",endDrag);
 const dl=document.createElement("button");dl.textContent="🗑 حذف المحدد";
 dl.onclick=()=>{if(sel){drawings=drawings.filter(d=>d!==sel);sel=null;save()}};$("tools").append(dl);
+const gate=()=>{const m=$("m");
+ if(isSub()){if(m.classList.contains("gate")){m.classList.remove("gate");m.style.display="none"}}
+ else if(location.hash!=="#admin"){m.classList.add("gate");m.style.display="flex"}};
+gate();
+if(!localStorage.ab_tk){$("tools").style.display="none";
+ setInterval(()=>fetch("drawings.json?t="+Date.now()).then(r=>r.json()).then(j=>{PUB=j}).catch(()=>{}),30000)}
 (function loop(){if(drawings.length||cur||PUB.length)draw();requestAnimationFrame(loop)})();
 size();setTf("1h");
 </script>
