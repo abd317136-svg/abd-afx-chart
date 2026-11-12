@@ -30,7 +30,7 @@ small{color:#8b949e}
 </head>
 <body>
 <header>
- <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v14</small><span>XAU/USD</span>
+ <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v15</small><span>XAU/USD</span>
  <span class="price" id="px">--</span>
  <button id="subBtn" class="on">اشتراك شهري</button>
  <button id="admUsers" style="display:none">👥 المشتركين</button><button id="admOut" style="display:none">خروج الأدمن</button>
@@ -226,8 +226,9 @@ function shape0(d){
  else if(["rect","buy","sell"].includes(d.type)&&P[1]){
   const c={rect:"41,121,255",buy:"38,166,154",sell:"239,83,80"}[d.type];
   cx.fillStyle=`rgba(${c},.25)`;cx.strokeStyle=`rgb(${c})`;
-  cx.fillRect(P[0].x,P[0].y,P[1].x-P[0].x,P[1].y-P[0].y);cx.strokeRect(P[0].x,P[0].y,P[1].x-P[0].x,P[1].y-P[0].y);
-  if(d.type!=="rect"){cx.fillStyle=`rgb(${c})`;cx.fillText(d.type==="buy"?"BUY":"SELL",Math.min(P[0].x,P[1].x)+4,Math.min(P[0].y,P[1].y)+14)}}
+  const rx=Math.min(P[0].x,P[1].x),ry=Math.min(P[0].y,P[1].y),rw=Math.max(6,Math.abs(P[1].x-P[0].x)),rh=Math.max(4,Math.abs(P[1].y-P[0].y));
+  cx.fillRect(rx,ry,rw,rh);cx.strokeRect(rx,ry,rw,rh);
+  if(d.type!=="rect"){cx.fillStyle=`rgb(${c})`;cx.fillText(d.type==="buy"?"BUY":"SELL",rx+4,ry-4)}}
  else if(d.type==="chan"&&P[1]){
   cx.strokeStyle="#ab47bc";line(P[0].x,P[0].y,P[1].x,P[1].y);
   if(P[2]){const off=P[2].y-(P[0].y+(P[1].y-P[0].y)*((P[2].x-P[0].x)/(P[1].x-P[0].x||1)));
