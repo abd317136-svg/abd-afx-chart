@@ -29,9 +29,10 @@ small{color:#8b949e}
 </head>
 <body>
 <header>
- <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v11</small><span>XAU/USD</span>
+ <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v12</small><span>XAU/USD</span>
  <span class="price" id="px">--</span>
  <button id="subBtn" class="on">اشتراك شهري</button>
+ <button id="admUsers" style="display:none">👥 المشتركين</button><button id="admOut" style="display:none">خروج الأدمن</button>
 </header>
 <div class="bar" id="tf"></div>
 <div class="bar" id="tools"></div>
@@ -39,6 +40,15 @@ small{color:#8b949e}
  <div class="lock" id="lock"><div>🔒 هذا الإطار/الأداة للمشتركين فقط<br><br><button class="on" onclick="openSub()">اشترك الآن</button></div></div>
 </div>
 
+<div class="modal" id="am"><div>
+ <h3 style="margin:0">دخول الأدمن</h3><small>الصق الـ Token تبعك</small>
+ <input id="amTk" type="password" dir="ltr" placeholder="github_pat_...">
+ <button class="on" id="amGo">دخول</button> <button onclick="$('am').style.display='none'">إغلاق</button><p id="amMsg"></p>
+</div></div>
+<div id="sm" style="display:none;position:fixed;inset:0;background:#0d1117;z-index:40">
+ <button onclick="$('sm').style.display='none'" style="position:absolute;top:8px;left:8px;z-index:2">✖ إغلاق</button>
+ <iframe id="sf" style="position:absolute;top:44px;left:0;width:100%;height:calc(100% - 44px);border:0"></iframe>
+</div>
 <div class="modal" id="m"><div>
  <h3 style="margin:0">الاشتراك الشهري</h3>
  <small>أدخل بريدك. بعد الدفع/التواصل يتم تفعيل اشتراكك يدوياً. إذا كنت مفعّل اكتب بريدك واضغط «دخول».</small>
@@ -62,6 +72,13 @@ function openSub(){$("m").style.display="flex"}
 $("subBtn").onclick=openSub;
 window.onerror=(e)=>{$("px").textContent="خطأ: "+e};
 if(location.hash==="#login")openSub();
+if(localStorage.ab_tk){$("admUsers").style.display=$("admOut").style.display=""}
+$("admUsers").onclick=()=>{$("sf").src="admin.html";$("sm").style.display="block"};
+$("admOut").onclick=()=>{localStorage.removeItem("ab_tk");location.hash="";location.reload()};
+if(location.hash==="#admin"&&!localStorage.ab_tk)$("am").style.display="flex";
+$("amGo").onclick=async()=>{const t=$("amTk").value.trim();
+ try{const r=await fetch("https://api.github.com/repos/abd317136-svg/abd-afx-chart/contents/subscribers.json",{headers:{Authorization:"Bearer "+t,Accept:"application/vnd.github+json"}});
+  if(!r.ok)throw 0;localStorage.ab_tk=t;location.hash="";location.reload()}catch(e){$("amMsg").textContent="Token غير صحيح"}};
 const TFS={ "1m":["1m",60],"5m":["5m",300],"15m":["15m",900],"1h":["1h",3600]};
 const FREE=["1h"]; let tf="1h", tool=null, drawings=[], cur=null, ws, data=[], loading=false;
 const yearAgo=()=>Date.now()/1000-365*86400;
