@@ -30,7 +30,7 @@ small{color:#8b949e}
 </head>
 <body>
 <header>
- <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v15</small><span>XAU/USD</span>
+ <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v16</small><span>XAU/USD</span>
  <span class="price" id="px">--</span>
  <button id="subBtn" class="on">اشتراك شهري</button>
  <button id="admUsers" style="display:none">👥 المشتركين</button><button id="admOut" style="display:none">خروج الأدمن</button>
@@ -192,12 +192,15 @@ $("login").onclick=async()=>{const h=await sha($("em").value.trim().toLowerCase(
 const cv=$("ov"),cx=cv.getContext("2d");
 function size(){const w=$("wrap"),d=devicePixelRatio||1;cv.width=w.clientWidth*d;cv.height=w.clientHeight*d;cx.setTransform(d,0,0,d,0,0)}
 function t2x(t){
- const n=data.length;if(!n)return null;const sec=TFS[tf][1];let idx;
- if(t>=data[n-1].time)idx=n-1+(t-data[n-1].time)/sec;
- else if(t<=data[0].time)idx=(t-data[0].time)/sec;
- else{let lo=0,hi=n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(data[m].time<=t)lo=m;else hi=m}
-  idx=lo+(t-data[lo].time)/((data[hi].time-data[lo].time)||1)}
- return chart.timeScale().logicalToCoordinate(idx);
+ const n=data.length;if(!n)return null;const ts=chart.timeScale(),sec=TFS[tf][1];
+ const cc=i=>{const v=ts.timeToCoordinate(data[i].time);return v!=null?v:ts.logicalToCoordinate(i)};
+ if(t>=data[n-1].time){const xl=cc(n-1),xp=n>1?cc(n-2):null;if(xl==null)return null;
+  return xl+(xp!=null?xl-xp:6)*(t-data[n-1].time)/sec}
+ if(t<=data[0].time){const x0=cc(0),x1=n>1?cc(1):null;if(x0==null)return null;
+  return x0-(x1!=null?x1-x0:6)*(data[0].time-t)/sec}
+ let lo=0,hi=n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(data[m].time<=t)lo=m;else hi=m}
+ const xa=cc(lo),xb=cc(hi);if(xa==null||xb==null)return null;
+ return xa+(xb-xa)*(t-data[lo].time)/((data[hi].time-data[lo].time)||1);
 }
 function x2t(x){
  const L=chart.timeScale().coordinateToLogical(x),n=data.length;if(L==null||!n)return null;const sec=TFS[tf][1];
@@ -286,6 +289,11 @@ window.addEventListener("pointermove",e=>{
 });
 const endDrag=()=>{if(drag){drag=null;save()}};
 window.addEventListener("pointerup",endDrag);window.addEventListener("pointercancel",endDrag);
+const dbg=document.createElement("button");dbg.textContent="🐞";
+dbg.onclick=()=>{const d=drawings[drawings.length-1];const n=data.length;
+ alert(JSON.stringify({tf,n,first:data[0]&&data[0].time,last:data[n-1]&&data[n-1].time,
+  pts:d?d.pts.map(q=>({t:q.t,p:q.p,x:X(q.t)})):null,lastx:n?chart.timeScale().timeToCoordinate(data[n-1].time):null}))};
+$("tools").append(dbg);
 const dl=document.createElement("button");dl.textContent="🗑 حذف المحدد";
 dl.onclick=()=>{if(sel){drawings=drawings.filter(d=>d!==sel);sel=null;save()}};$("tools").append(dl);
 const gate=()=>{const m=$("m");
