@@ -18,7 +18,7 @@ button{background:#21262d;color:var(--t);border:1px solid var(--b);border-radius
 button.on{background:var(--g);color:#000;border-color:var(--g)}
 .bar{display:flex;flex-wrap:wrap;gap:6px;padding:6px 12px;background:var(--p);border-bottom:1px solid var(--b)}
 #wrap{position:relative;flex:1;min-height:300px;direction:ltr}
-#chart,#ov{position:absolute;left:0;top:0;width:100%;height:100%}#chart{z-index:0}#ov{z-index:10}#ov{pointer-events:none}
+#chart,#ov{position:absolute;left:0;top:0;width:100%;height:100%}#chart{z-index:0}#wrap{touch-action:none}#ov{z-index:10}#ov{pointer-events:none}
 #ov.act{pointer-events:auto;cursor:crosshair;touch-action:none}
 .lock{position:absolute;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:20;text-align:center;padding:20px}
 .modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:30}
@@ -29,7 +29,7 @@ small{color:#8b949e}
 </head>
 <body>
 <header>
- <span class="logo">Abd-Afx-chart</span><small>v7</small><span>XAU/USD</span>
+ <span class="logo">Abd-Afx-chart</span><small>v8</small><span>XAU/USD</span>
  <span class="price" id="px">--</span>
  <button id="subBtn" class="on">اشتراك شهري</button>
 </header>
@@ -199,7 +199,7 @@ cv.addEventListener("pointerup",e=>{try{
 });
 cv.addEventListener("pointermove",e=>{if(cur&&!pan){const r=cv.getBoundingClientRect();cur.hover={t:x2t(e.clientX-r.left),p:series.coordinateToPrice(e.clientY-r.top)};draw()}});
 const W=()=>cv.clientWidth;
-function shape(d){
+function shape0(d){
  const pts=d.hover&&d.pts.length<need(d.type)?d.pts.concat(d.hover):d.pts;
  const P=pts.filter(q=>q.t!=null).map(q=>({x:X(q.t),y:Y(q.p),p:q.p}));if(!P.length||P.some(q=>q.x==null||q.y==null))return;
  cx.lineWidth=1.5;
@@ -224,6 +224,50 @@ function line(a,b,c,d){cx.beginPath();cx.moveTo(a,b);cx.lineTo(c,d);cx.stroke()}
 function draw(){cx.clearRect(0,0,cv.width,cv.height);cx.font="11px sans-serif";if(localStorage.ab_tk)drawings.forEach(shape);else{PUB.forEach(shape);drawings.forEach(shape)}if(cur)shape(cur)}
 chart.timeScale().subscribeVisibleTimeRangeChange(draw);
 $("wrap").addEventListener("wheel",()=>requestAnimationFrame(draw));
+let sel=null,drag=null;
+function shape(d){shape0(d);if(d===sel){const P=pts2(d);if(P){cx.fillStyle="#fff";cx.strokeStyle="#000";cx.lineWidth=1.5;
+ const Q=d.type==="hline"?[{x:W()-24,y:P[0].y}]:P;Q.forEach(q=>{cx.beginPath();cx.arc(q.x,q.y,7,0,6.3);cx.fill();cx.stroke()})}}}
+function pts2(d){const r=d.pts.map(q=>({x:X(q.t),y:Y(q.p)}));return r.some(q=>q.x==null||q.y==null)?null:r}
+function dseg(px,py,a,b){const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy;let t=l?((px-a.x)*dx+(py-a.y)*dy)/l:0;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(a.x+t*dx),py-(a.y+t*dy))}
+function hitTest(x,y){
+ const T=18;
+ for(let i=drawings.length-1;i>=0;i--){const d=drawings[i],P=pts2(d);if(!P)continue;
+  if(d.type!=="hline")for(let k=0;k<P.length;k++)if(Math.hypot(x-P[k].x,y-P[k].y)<T)return{d,h:k};
+  let body=false;
+  if(d.type==="hline")body=Math.abs(y-P[0].y)<T;
+  else if(P[1]&&["rect","buy","sell"].includes(d.type))body=x>=Math.min(P[0].x,P[1].x)-9&&x<=Math.max(P[0].x,P[1].x)+9&&y>=Math.min(P[0].y,P[1].y)-9&&y<=Math.max(P[0].y,P[1].y)+9;
+  else if(P[1]&&d.type==="fib"){const a=d.pts[0].p,b=d.pts[1].p;
+   body=x>=Math.min(P[0].x,P[1].x)-T&&x<=Math.max(P[0].x,P[1].x)+T&&[0,.236,.382,.5,.618,.786,1].some(l=>{const yy=Y(b-(b-a)*l);return yy!=null&&Math.abs(y-yy)<T})}
+  else if(P[1]&&d.type==="chan"){body=dseg(x,y,P[0],P[1])<T;
+   if(!body&&P[2]){const off=P[2].y-(P[0].y+(P[1].y-P[0].y)*((P[2].x-P[0].x)/(P[1].x-P[0].x||1)));
+    body=dseg(x,y,{x:P[0].x,y:P[0].y+off},{x:P[1].x,y:P[1].y+off})<T}}
+  if(body)return{d,h:-1};
+ }
+ return null;
+}
+const wrapEl=$("wrap");
+function xy(e){const t=(e.touches&&e.touches[0])||e,r=wrapEl.getBoundingClientRect();return{x:t.clientX-r.left,y:t.clientY-r.top}}
+const idle=()=>!(tool&&!pan)&&!cur;
+function setPt(q,x,y,onlyY){const p=series.coordinateToPrice(y);if(p!=null)q.p=p;if(!onlyY){const t=x2t(x);if(t!=null)q.t=t}}
+wrapEl.addEventListener("pointerdown",e=>{
+ if(!idle())return;const c=xy(e),h=hitTest(c.x,c.y);
+ if(h){sel=h.d;drag={d:h.d,h:h.h,sx:c.x,sy:c.y,orig:h.d.pts.map(q=>({x:X(q.t),y:Y(q.p)}))};
+  e.stopPropagation();e.preventDefault();try{wrapEl.setPointerCapture(e.pointerId)}catch(x){}}
+ else sel=null;
+},true);
+["touchstart","mousedown"].forEach(n=>wrapEl.addEventListener(n,e=>{
+ if(!idle())return;const c=xy(e);if(drag||hitTest(c.x,c.y)){e.stopPropagation();e.preventDefault()}},{capture:true,passive:false}));
+["touchmove","mousemove","touchend","mouseup"].forEach(n=>wrapEl.addEventListener(n,e=>{
+ if(drag){e.stopPropagation();if(e.cancelable)e.preventDefault()}},{capture:true,passive:false}));
+window.addEventListener("pointermove",e=>{
+ if(!drag)return;const c=xy(e),dx=c.x-drag.sx,dy=c.y-drag.sy,d=drag.d;
+ if(drag.h>=0){const o=drag.orig[drag.h];setPt(d.pts[drag.h],o.x+dx,o.y+dy)}
+ else d.pts.forEach((q,i)=>{const o=drag.orig[i];setPt(q,o.x+dx,o.y+dy,d.type==="hline")});
+});
+const endDrag=()=>{if(drag){drag=null;save()}};
+window.addEventListener("pointerup",endDrag);window.addEventListener("pointercancel",endDrag);
+const dl=document.createElement("button");dl.textContent="🗑 حذف المحدد";
+dl.onclick=()=>{if(sel){drawings=drawings.filter(d=>d!==sel);sel=null;save()}};$("tools").append(dl);
 (function loop(){if(drawings.length||cur||PUB.length)draw();requestAnimationFrame(loop)})();
 size();setTf("1h");
 </script>
