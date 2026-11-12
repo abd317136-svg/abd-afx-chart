@@ -29,7 +29,7 @@ small{color:#8b949e}
 </head>
 <body>
 <header>
- <span class="logo">Abd-Afx-chart</span><small>v6</small><span>XAU/USD</span>
+ <span class="logo">Abd-Afx-chart</span><small>v7</small><span>XAU/USD</span>
  <span class="price" id="px">--</span>
  <button id="subBtn" class="on">اشتراك شهري</button>
 </header>
@@ -138,6 +138,10 @@ function setTf(k){
 const TOOLS=[["hline","خط أفقي",1],["rect","مربع",2],["buy","زون شراء",2],["sell","زون بيع",2],["chan","قناة سعرية",3],["fib","فيبوناتشي",2]];
 TOOLS.forEach(([id,n])=>{const b=document.createElement("button");b.textContent=n;b.id="t"+id;b.onclick=()=>pick(id);$("tools").append(b)});
 const clr=document.createElement("button");clr.textContent="مسح الكل";clr.onclick=()=>{drawings=[];save();draw()};$("tools").append(clr);
+let pan=false;
+function mode(){$("ov").classList.toggle("act",!!tool&&!pan)}
+function setPan(v){pan=v;$("tpan").classList.toggle("on",pan);mode()}
+const pn=document.createElement("button");pn.textContent="✋ تحريك";pn.id="tpan";pn.onclick=()=>setPan(!pan);$("tools").prepend(pn);
 const und=document.createElement("button");und.textContent="تراجع";und.onclick=()=>{drawings.pop();save();draw()};$("tools").append(und);
 if(localStorage.ab_tk){const pb=document.createElement("button");pb.textContent="📢 نشر للجميع";pb.className="on";pb.onclick=publish;$("tools").append(pb)}
 async function publish(){
@@ -151,8 +155,8 @@ async function publish(){
 function pick(id){
  if(!isSub()){$("lock").style.display="flex";return}
  tool=tool===id?null:id;cur=null;
- document.querySelectorAll("#tools button").forEach(b=>b.classList.toggle("on",b.id==="t"+tool));
- $("ov").classList.toggle("act",!!tool);
+ document.querySelectorAll("#tools button[id^=t]:not(#tpan)").forEach(b=>b.classList.toggle("on",b.id==="t"+tool));
+ setPan(false);
 }
 
 $("send").onclick=async()=>{
@@ -187,13 +191,13 @@ function save(){localStorage.ab_dr=JSON.stringify(drawings)}
 try{drawings=JSON.parse(localStorage.ab_dr||"[]")}catch(e){}
 const need=id=>TOOLS.find(t=>t[0]===id)[2];
 cv.addEventListener("pointerup",e=>{try{
- if(!tool)return;const r=cv.getBoundingClientRect();
+ if(!tool||pan)return;const r=cv.getBoundingClientRect();
  const t=x2t(e.clientX-r.left)??data[data.length-1].time;
  const p=series.coordinateToPrice(e.clientY-r.top);
  cur=cur||{type:tool,pts:[]};cur.pts.push({t,p});
- if(cur.pts.length>=need(tool)){drawings.push(cur);cur=null;save()}draw()}catch(x){alert("خطأ رسم: "+x.message)}
+ if(cur.pts.length>=need(tool)){drawings.push(cur);cur=null;save();setPan(true)}draw()}catch(x){alert("خطأ رسم: "+x.message)}
 });
-cv.addEventListener("mousemove",e=>{if(cur){const r=cv.getBoundingClientRect();cur.hover={t:x2t(e.clientX-r.left),p:series.coordinateToPrice(e.clientY-r.top)};draw()}});
+cv.addEventListener("pointermove",e=>{if(cur&&!pan){const r=cv.getBoundingClientRect();cur.hover={t:x2t(e.clientX-r.left),p:series.coordinateToPrice(e.clientY-r.top)};draw()}});
 const W=()=>cv.clientWidth;
 function shape(d){
  const pts=d.hover&&d.pts.length<need(d.type)?d.pts.concat(d.hover):d.pts;
@@ -220,7 +224,7 @@ function line(a,b,c,d){cx.beginPath();cx.moveTo(a,b);cx.lineTo(c,d);cx.stroke()}
 function draw(){cx.clearRect(0,0,cv.width,cv.height);cx.font="11px sans-serif";if(localStorage.ab_tk)drawings.forEach(shape);else{PUB.forEach(shape);drawings.forEach(shape)}if(cur)shape(cur)}
 chart.timeScale().subscribeVisibleTimeRangeChange(draw);
 $("wrap").addEventListener("wheel",()=>requestAnimationFrame(draw));
-setInterval(draw,500);
+(function loop(){if(drawings.length||cur||PUB.length)draw();requestAnimationFrame(loop)})();
 size();setTf("1h");
 </script>
 </body>
