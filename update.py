@@ -1,6 +1,6 @@
 import json, os, urllib.request
-CFG = {"1m": ("1m", "7d"), "5m": ("5m", "60d"), "15m": ("15m", "60d"), "1h": ("60m", "1y")}
-CAP = {"1m": 20000, "5m": 40000, "15m": 40000, "1h": 9000}
+CFG = {"1m": ("1m", "7d"), "5m": ("5m", "60d"), "15m": ("15m", "60d"), "1h": ("60m", "1y"), "1d": ("1d", "5y")}
+CAP = {"1m": 20000, "5m": 40000, "15m": 40000, "1h": 9000, "1d": 3000}
 
 def get(sym, iv, rg):
     u = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?interval={iv}&range={rg}"
@@ -35,3 +35,15 @@ for tf, (iv, rg) in CFG.items():
         m[c[0]] = c
     out = [m[k] for k in sorted(m)][-CAP[tf]:]
     json.dump(out, open(p, "w"), separators=(",", ":"))
+
+# 4h candles built from 1h
+p1 = "data/1h.json"
+if os.path.exists(p1):
+    b = {}
+    for t, o, h, l, c in json.load(open(p1)):
+        k = t - t % 14400
+        if k not in b:
+            b[k] = [k, o, h, l, c]
+        else:
+            x = b[k]; x[2] = max(x[2], h); x[3] = min(x[3], l); x[4] = c
+    json.dump([b[k] for k in sorted(b)][-9000:], open("data/4h.json", "w"), separators=(",", ":"))

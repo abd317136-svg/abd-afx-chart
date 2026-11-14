@@ -30,7 +30,7 @@ small{color:#8b949e}
 </head>
 <body>
 <header>
- <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v16</small><span>XAU/USD</span>
+ <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v17</small><span>XAU/USD</span>
  <span class="price" id="px">--</span>
  <button id="subBtn" class="on">اشتراك شهري</button>
  <button id="admUsers" style="display:none">👥 المشتركين</button><button id="admOut" style="display:none">خروج الأدمن</button>
@@ -80,7 +80,7 @@ if(location.hash==="#admin"&&!localStorage.ab_tk){$("am").classList.add("gate");
 $("amGo").onclick=async()=>{const t=$("amTk").value.trim();
  try{const r=await fetch("https://api.github.com/repos/abd317136-svg/abd-afx-chart/contents/subscribers.json",{headers:{Authorization:"Bearer "+t,Accept:"application/vnd.github+json"}});
   if(!r.ok)throw 0;localStorage.ab_tk=t;location.hash="";location.reload()}catch(e){$("amMsg").textContent="Token غير صحيح"}};
-const TFS={ "1m":["1m",60],"5m":["5m",300],"15m":["15m",900],"1h":["1h",3600]};
+const TFS={ "1m":["1m",60],"5m":["5m",300],"15m":["15m",900],"1h":["1h",3600],"4h":["4h",14400],"1d":["1d",86400]};
 const FREE=["1h"]; let tf="1h", tool=null, drawings=[], cur=null, ws, data=[], loading=false;
 const yearAgo=()=>Date.now()/1000-365*86400;
 const isSub=()=>{if(localStorage.ab_tk)return true;const h=localStorage.ab_h,x=SUBS[h];return !!(h&&x&&new Date(x.exp)>new Date())};
@@ -90,7 +90,7 @@ const series=chart.addCandlestickSeries({upColor:"#26a69a",downColor:"#ef5350",b
 new ResizeObserver(()=>{chart.resize($("wrap").clientWidth,$("wrap").clientHeight);size();draw()}).observe($("wrap"));
 
 /* ===== البيانات ===== */
-const IV={by:{"1m":"1","5m":"5","15m":"15","1h":"60"},kr:{"1m":1,"5m":5,"15m":15,"1h":60}};
+const IV={by:{"1m":"1","5m":"5","15m":"15","1h":"60","4h":"240","1d":"D"},kr:{"1m":1,"5m":5,"15m":15,"1h":60,"4h":240,"1d":1440}};
 const BN=["https://data-api.binance.vision","https://api.binance.com","https://api1.binance.com"];
 const PROV=[
  {n:"Repo",f:async(tf,end,lim)=>{if(end)return [];
@@ -140,8 +140,11 @@ function live(){
  timer=setInterval(async()=>{try{
   const p=+(await(await fetch("https://api.gold-api.com/price/XAU")).json()).price;
   if(mine!==tf||!p||!data.length)return;
-  const sec=TFS[tf][1],b=Math.floor(Date.now()/1000/sec)*sec,l=data[data.length-1];let c;
-  if(b>l.time){c={time:b,open:p,high:p,low:p,close:p};data.push(c)}
+  const now=Date.now()/1000,d0=new Date(now*1000),wd=d0.getUTCDay(),hh=d0.getUTCHours();
+  $("px").textContent=p.toFixed(2);
+  if(wd===6||(wd===5&&hh>=22)||(wd===0&&hh<22))return;
+  const sec=TFS[tf][1],l=data[data.length-1];let c;
+  if(now>=l.time+sec){const b=l.time+Math.floor((now-l.time)/sec)*sec;c={time:b,open:p,high:p,low:p,close:p};data.push(c)}
   else{c={time:l.time,open:l.open,high:Math.max(l.high,p),low:Math.min(l.low,p),close:p};data[data.length-1]=c}
   series.update(c);$("px").textContent=p.toFixed(2);
  }catch(e){}},4000);
@@ -154,14 +157,16 @@ function setTf(k){
  $("lock").style.display="none";tf=k;
  document.querySelectorAll("#tf button").forEach(b=>b.classList.toggle("on",b.id==="tf"+k));load();
 }
-const TOOLS=[["hline","خط أفقي",1],["rect","مربع",2],["buy","زون شراء",2],["sell","زون بيع",2],["chan","قناة سعرية",3],["fib","فيبوناتشي",2]];
+const TOOLS=[["hline","خط أفقي",1],["rect","مربع",2],["buy","زون شراء",2],["sell","زون بيع",2],["chan","قناة سعرية",3],["fib","فيبوناتشي",2],["trend","ترند لاين",2],["liq","سيولة x",2]];
 TOOLS.forEach(([id,n])=>{const b=document.createElement("button");b.textContent=n;b.id="t"+id;b.onclick=()=>pick(id);$("tools").append(b)});
-const clr=document.createElement("button");clr.textContent="مسح الكل";clr.onclick=()=>{drawings=[];save();draw()};$("tools").append(clr);
+let trash=[];
+const clr=document.createElement("button");clr.textContent="مسح الكل";clr.onclick=()=>{if(drawings.length)trash.push(drawings);drawings=[];sel=null;save()};$("tools").append(clr);
 let pan=false;
 function mode(){$("ov").classList.toggle("act",!!tool&&!pan)}
 function setPan(v){pan=v;$("tpan").classList.toggle("on",pan);mode()}
 const pn=document.createElement("button");pn.textContent="✋ تحريك";pn.id="tpan";pn.onclick=()=>setPan(!pan);$("tools").prepend(pn);
-const und=document.createElement("button");und.textContent="تراجع";und.onclick=()=>{drawings.pop();save();draw()};$("tools").append(und);
+const und=document.createElement("button");und.textContent="تراجع";und.onclick=()=>{const d=drawings.pop();if(d)trash.push([d]);save()};$("tools").append(und);
+const rs=document.createElement("button");rs.textContent="↩️ استرجاع";rs.onclick=()=>{const g=trash.pop();if(g){drawings=drawings.concat(g);save()}};$("tools").append(rs);
 if(localStorage.ab_tk){const pb=document.createElement("button");pb.textContent="📢 نشر للجميع";pb.className="on";pb.onclick=publish;$("tools").append(pb)}
 async function publish(){
  const api="https://api.github.com/repos/abd317136-svg/abd-afx-chart/contents/drawings.json";
@@ -216,7 +221,7 @@ cv.addEventListener("pointerup",e=>{try{
  if(!tool||pan)return;const r=cv.getBoundingClientRect();
  const t=x2t(e.clientX-r.left)??data[data.length-1].time;
  const p=series.coordinateToPrice(e.clientY-r.top);
- cur=cur||{type:tool,pts:[]};cur.pts.push({t,p});
+ cur=cur||{type:tool,pts:[]};cur.pts.push({t,p});if(cur.type==="liq"&&cur.pts.length===2)cur.pts[1].p=cur.pts[0].p;
  if(cur.pts.length>=need(tool)){drawings.push(cur);cur=null;save();setPan(true)}draw()}catch(x){alert("خطأ رسم: "+x.message)}
 });
 cv.addEventListener("pointermove",e=>{if(cur&&!pan){const r=cv.getBoundingClientRect();cur.hover={t:x2t(e.clientX-r.left),p:series.coordinateToPrice(e.clientY-r.top)};draw()}});
@@ -237,6 +242,9 @@ function shape0(d){
   if(P[2]){const off=P[2].y-(P[0].y+(P[1].y-P[0].y)*((P[2].x-P[0].x)/(P[1].x-P[0].x||1)));
    line(P[0].x,P[0].y+off,P[1].x,P[1].y+off);cx.globalAlpha=.1;cx.fillStyle="#ab47bc";cx.beginPath();
    cx.moveTo(P[0].x,P[0].y);cx.lineTo(P[1].x,P[1].y);cx.lineTo(P[1].x,P[1].y+off);cx.lineTo(P[0].x,P[0].y+off);cx.fill();cx.globalAlpha=1}}
+ else if(d.type==="trend"&&P[1]){cx.strokeStyle="#42a5f5";cx.lineWidth=2;line(P[0].x,P[0].y,P[1].x,P[1].y)}
+ else if(d.type==="liq"&&P[1]){cx.strokeStyle="#ffd54f";cx.lineWidth=2;line(P[0].x,P[0].y,P[1].x,P[0].y);
+  cx.fillStyle="#ffd54f";cx.font="bold 15px sans-serif";cx.textAlign="center";cx.fillText("x",(P[0].x+P[1].x)/2,P[0].y+15);cx.textAlign="start";cx.font="11px sans-serif"}
  else if(d.type==="fib"&&P[1]){
   const a=pts[0].p,b=pts[1].p,x1=Math.min(P[0].x,P[1].x),x2=Math.max(P[0].x,P[1].x);
   [0,.236,.382,.5,.618,.786,1].forEach(l=>{const pr=b-(b-a)*l,y=Y(pr);if(y==null)return;
@@ -264,6 +272,8 @@ function hitTest(x,y){
   else if(P[1]&&d.type==="chan"){body=dseg(x,y,P[0],P[1])<T;
    if(!body&&P[2]){const off=P[2].y-(P[0].y+(P[1].y-P[0].y)*((P[2].x-P[0].x)/(P[1].x-P[0].x||1)));
     body=dseg(x,y,{x:P[0].x,y:P[0].y+off},{x:P[1].x,y:P[1].y+off})<T}}
+  if(P[1]&&d.type==="trend")body=dseg(x,y,P[0],P[1])<T;
+  if(P[1]&&d.type==="liq")body=dseg(x,y,P[0],{x:P[1].x,y:P[0].y})<T+8;
   if(body)return{d,h:-1};
  }
  return null;
@@ -284,7 +294,9 @@ wrapEl.addEventListener("pointerdown",e=>{
  if(drag){e.stopPropagation();if(e.cancelable)e.preventDefault()}},{capture:true,passive:false}));
 window.addEventListener("pointermove",e=>{
  if(!drag)return;const c=xy(e),dx=c.x-drag.sx,dy=c.y-drag.sy,d=drag.d;
- if(drag.h>=0){const o=drag.orig[drag.h];setPt(d.pts[drag.h],o.x+dx,o.y+dy)}
+ if(drag.h>=0&&d.type==="liq"){const o=drag.orig[drag.h],t=x2t(o.x+dx),p=series.coordinateToPrice(o.y+dy);
+  if(t!=null)d.pts[drag.h].t=t;if(p!=null){d.pts[0].p=p;d.pts[1].p=p}}
+ else if(drag.h>=0){const o=drag.orig[drag.h];setPt(d.pts[drag.h],o.x+dx,o.y+dy)}
  else d.pts.forEach((q,i)=>{const o=drag.orig[i];setPt(q,o.x+dx,o.y+dy,d.type==="hline")});
 });
 const endDrag=()=>{if(drag){drag=null;save()}};
@@ -295,7 +307,7 @@ dbg.onclick=()=>{const d=drawings[drawings.length-1];const n=data.length;
   pts:d?d.pts.map(q=>({t:q.t,p:q.p,x:X(q.t)})):null,lastx:n?chart.timeScale().timeToCoordinate(data[n-1].time):null}))};
 $("tools").append(dbg);
 const dl=document.createElement("button");dl.textContent="🗑 حذف المحدد";
-dl.onclick=()=>{if(sel){drawings=drawings.filter(d=>d!==sel);sel=null;save()}};$("tools").append(dl);
+dl.onclick=()=>{if(sel){trash.push([sel]);drawings=drawings.filter(d=>d!==sel);sel=null;save()}};$("tools").append(dl);
 const gate=()=>{const m=$("m");
  if(isSub()){if(m.classList.contains("gate")){m.classList.remove("gate");m.style.display="none"}}
  else if(location.hash!=="#admin"){m.classList.add("gate");m.style.display="flex"}};
