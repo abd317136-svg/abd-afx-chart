@@ -30,7 +30,7 @@ small{color:#8b949e}
 </head>
 <body>
 <header>
- <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v19</small><span>XAU/USD</span>
+ <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v20</small><span>XAU/USD</span>
  <span class="price" id="px">--</span>
  <button id="subBtn" class="on">اشتراك شهري</button>
  <button id="admUsers" style="display:none">👥 المشتركين</button><button id="admOut" style="display:none">خروج الأدمن</button>
@@ -242,10 +242,11 @@ function shape0(d){
   if(P[2]){const off=P[2].y-(P[0].y+(P[1].y-P[0].y)*((P[2].x-P[0].x)/(P[1].x-P[0].x||1)));
    line(P[0].x,P[0].y+off,P[1].x,P[1].y+off);cx.globalAlpha=.1;cx.fillStyle="#ab47bc";cx.beginPath();
    cx.moveTo(P[0].x,P[0].y);cx.lineTo(P[1].x,P[1].y);cx.lineTo(P[1].x,P[1].y+off);cx.lineTo(P[0].x,P[0].y+off);cx.fill();cx.globalAlpha=1}}
- else if(isH(d.type)){const col=d.type==="sl"?"#ef5350":"#2962ff",nm=d.type==="sl"?"SL":d.type.toUpperCase();
-  cx.strokeStyle=col;cx.lineWidth=1.5;cx.setLineDash([6,4]);line(0,P[0].y,W(),P[0].y);cx.setLineDash([]);
+ else if(["tp1","tp2","tp3","sl"].includes(d.type)){const col=d.type==="sl"?"#ef5350":"#2962ff",nm=d.type==="sl"?"SL":d.type.toUpperCase();
   const tx=nm+"  "+P[0].p.toFixed(2);cx.font="bold 12px sans-serif";const w=cx.measureText(tx).width+12;
-  cx.fillStyle=col;cx.fillRect(W()-w-6,P[0].y-10,w,20);cx.fillStyle="#fff";cx.textAlign="left";cx.fillText(tx,W()-w,P[0].y+4);cx.font="11px sans-serif"}
+  const x0=P[0].x+10+w>W()?P[0].x-10-w:P[0].x+10;
+  cx.fillStyle=col;cx.fillRect(x0,P[0].y-10,w,20);cx.fillStyle="#fff";cx.textAlign="left";cx.fillText(tx,x0+6,P[0].y+4);
+  cx.beginPath();cx.arc(P[0].x,P[0].y,5,0,6.3);cx.fillStyle=col;cx.fill();cx.strokeStyle="#fff";cx.lineWidth=1.5;cx.stroke();cx.font="11px sans-serif"}
  else if(d.type==="trend"&&P[1]){cx.strokeStyle="#42a5f5";cx.lineWidth=2;line(P[0].x,P[0].y,P[1].x,P[1].y)}
  else if(d.type==="liq"&&P[1]){cx.strokeStyle="#ef5350";cx.lineWidth=2;line(P[0].x,P[0].y,P[1].x,P[0].y);
   cx.fillStyle="#ef5350";cx.font="bold 15px sans-serif";cx.textAlign="center";cx.fillText("x",(P[0].x+P[1].x)/2,P[0].y+15);cx.textAlign="start";cx.font="11px sans-serif";
@@ -261,7 +262,7 @@ function draw(){cx.clearRect(0,0,cv.width,cv.height);cx.font="11px sans-serif";i
 chart.timeScale().subscribeVisibleTimeRangeChange(draw);
 $("wrap").addEventListener("wheel",()=>requestAnimationFrame(draw));
 let sel=null,drag=null;
-const isH=t=>["hline","tp1","tp2","tp3","sl"].includes(t);
+const isH=t=>t==="hline";
 function shape(d){shape0(d);if(d===sel){const P=pts2(d);if(P){cx.fillStyle="#fff";cx.strokeStyle="#000";cx.lineWidth=1.5;
  const Q=isH(d.type)?[{x:d.type==="hline"?W()-24:14,y:P[0].y}]:P;Q.forEach(q=>{cx.beginPath();cx.arc(q.x,q.y,7,0,6.3);cx.fill();cx.stroke()})}}}
 function pts2(d){const r=d.pts.map(q=>({x:X(q.t),y:Y(q.p)}));return r.some(q=>q.x==null||q.y==null)?null:r}
@@ -278,6 +279,7 @@ function hitTest(x,y){
   else if(P[1]&&d.type==="chan"){body=dseg(x,y,P[0],P[1])<T;
    if(!body&&P[2]){const off=P[2].y-(P[0].y+(P[1].y-P[0].y)*((P[2].x-P[0].x)/(P[1].x-P[0].x||1)));
     body=dseg(x,y,{x:P[0].x,y:P[0].y+off},{x:P[1].x,y:P[1].y+off})<T}}
+  if(["tp1","tp2","tp3","sl"].includes(d.type))body=x>=P[0].x-T&&x<=P[0].x+120&&Math.abs(y-P[0].y)<T;
   if(P[1]&&d.type==="trend")body=dseg(x,y,P[0],P[1])<T;
   if(P[1]&&d.type==="liq")body=dseg(x,y,P[0],{x:P[1].x,y:P[0].y})<T+8;
   if(body)return{d,h:-1};
