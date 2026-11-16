@@ -122,9 +122,18 @@ async function kl(end,lim=1000){
  for(let i=0;i<ps.length;i++){try{const d=await ps[i];if(d.length){cur2=i;return d}}catch(e){err=e}}
  throw err||new Error("no data");
 }
+/* إذا ملف الريبو قديم (فيه فجوة قبل آخر سعر)، منكمّل الشمعات الناقصة من المصادر الحية */
+async function fresh(d){
+ const sec=TFS[tf][1],now=Date.now()/1000;
+ if(cur2!==0||!d.length||now-d[d.length-1].time<=sec*2)return d;
+ const ps=PROV.slice(1).map(p=>TO(p.f(tf,0,300),5000));
+ ps.forEach(p=>p.catch(()=>{}));
+ for(const p of ps){try{const n=await p;if(n.length)return d.filter(c=>c.time<n[0].time).concat(n)}catch(e){}}
+ return d;
+}
 async function load(){
  $("px").textContent="جاري التحميل...";data=[];clearInterval(timer);const mine=tf;
- try{data=await kl();}catch(e){$("px").textContent="تعذر جلب الأسعار: "+e.message;return}
+ try{data=await fresh(await kl());}catch(e){$("px").textContent="تعذر جلب الأسعار: "+e.message;return}
  if(mine!==tf)return;
  series.setData(data);chart.timeScale().scrollToRealTime();
  $("px").textContent=data[data.length-1].close.toFixed(2);live();
