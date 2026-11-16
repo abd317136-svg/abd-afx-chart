@@ -112,11 +112,14 @@ const PROV=[
   return k.map(x=>({time:+x[0],open:+x[1],high:+x[2],low:+x[3],close:+x[4]}))}}
 ];
 let cur2=0;
+const TO=(p,ms)=>new Promise((res,rej)=>{const t=setTimeout(()=>rej(new Error("timeout")),ms);p.then(v=>{clearTimeout(t);res(v)},e=>{clearTimeout(t);rej(e)})});
 async function kl(end,lim=1000){
  if(end)return PROV[cur2].f(tf,end,lim);
+ /* كل المصادر تنطلب بنفس الوقت (بدل واحد ورا واحد)، وبناخد أول مصدر بالترتيب جاب بيانات */
+ const ps=PROV.map((p,i)=>TO(p.f(tf,0,lim),i===0?3000:6000));
+ ps.forEach(p=>p.catch(()=>{}));
  let err;
- for(let i=0;i<PROV.length;i++){const p=(cur2+i)%PROV.length;
-  try{const d=await PROV[p].f(tf,0,lim);if(d.length){cur2=p;return d}}catch(e){err=e}}
+ for(let i=0;i<ps.length;i++){try{const d=await ps[i];if(d.length){cur2=i;return d}}catch(e){err=e}}
  throw err||new Error("no data");
 }
 async function load(){
