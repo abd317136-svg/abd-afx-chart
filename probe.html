@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>فحص المصادر</title>
+<style>
+body{background:#0d1117;color:#e6edf3;font:16px -apple-system,Arial,sans-serif;margin:0;padding:14px}
+h1{font-size:18px;margin:0 0 6px}#sum{color:#d4af37;margin:0 0 12px;font-size:15px}
+.r{border-bottom:1px solid #222;padding:8px 0;display:flex;gap:8px;align-items:flex-start}
+.n{flex:0 0 118px;font-weight:600}.s{flex:1;word-break:break-all;font-size:14px}
+.ok{color:#3fb950}.warn{color:#d29922}.bad{color:#f85149}small{color:#8b949e;display:block}
+</style></head><body>
+<h1>فحص المصادر من شبكتك</h1><div id="sum">جاري الفحص...</div><div id="out"></div>
+<script>
+const T=[
+["gold-api (سعر)","https://api.gold-api.com/price/XAU"],
+["Worker","https://abd-candle.abd317136.workers.dev/klines?tf=1m&limit=3"],
+["OKX XAUT","https://www.okx.com/api/v5/market/candles?instId=XAUT-USDT&bar=1m&limit=3"],
+["OKX XAUT (aws)","https://aws.okx.com/api/v5/market/candles?instId=XAUT-USDT&bar=1m&limit=3"],
+["KuCoin XAUT","https://api.kucoin.com/api/v1/market/candles?type=1min&symbol=XAUT-USDT"],
+["Gate XAUT","https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=XAUT_USDT&interval=1m&limit=3"],
+["Gate PAXG","https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=PAXG_USDT&interval=1m&limit=3"],
+["MEXC PAXG","https://api.mexc.com/api/v3/klines?symbol=PAXGUSDT&interval=1m&limit=3"],
+["Bitget XAUT","https://api.bitget.com/api/v2/spot/market/candles?symbol=XAUTUSDT&granularity=1min&limit=3"],
+["Coinbase PAXG","https://api.exchange.coinbase.com/products/PAXG-USD/candles?granularity=60"],
+["CryptoCompare","https://min-api.cryptocompare.com/data/v2/histominute?fsym=PAXG&tsym=USD&limit=3"],
+["HTX PAXG","https://api.huobi.pro/market/history/kline?symbol=paxgusdt&period=1min&size=3"],
+["Bybit","https://api.bybit.com/v5/market/kline?category=linear&symbol=XAUUSDT&interval=1&limit=3"],
+["Binance","https://data-api.binance.vision/api/v3/klines?symbol=PAXGUSDT&interval=1m&limit=3"],
+["Kraken","https://api.kraken.com/0/public/OHLC?pair=PAXGUSD&interval=1"],
+["GitHub raw","https://raw.githubusercontent.com/abd317136-svg/abd-afx-chart/main/data/meta.json"],
+["jsDelivr","https://cdn.jsdelivr.net/gh/abd317136-svg/abd-afx-chart@main/data/meta.json"]
+];
+const out=document.getElementById("out"),sum=document.getElementById("sum");
+let ok=0,done=0;
+function row(n,u){const d=document.createElement("div");d.className="r";d.innerHTML='<div class="n">'+n+'</div><div class="s">...</div>';out.appendChild(d);return d.querySelector(".s")}
+async function go(f,ms){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await f(c.signal)}finally{clearTimeout(t)}}
+T.forEach(async([n,u])=>{
+ const el=row(n,u),t0=Date.now();
+ try{
+  const r=await go(s=>fetch(u,{signal:s,cache:"no-store"}),7000);
+  const x=(await r.text()).slice(0,70).replace(/</g,"&lt;");
+  el.className="s "+(r.ok?"ok":"warn");el.innerHTML=(r.ok?"✅ ":"⚠️ HTTP "+r.status+" ")+(Date.now()-t0)+"ms<small>"+x+"</small>";
+  if(r.ok)ok++;
+ }catch(e){
+  try{await go(s=>fetch(u,{signal:s,mode:"no-cors",cache:"no-store"}),5000);
+   el.className="s warn";el.innerHTML="⚠️ بيوصل بس بدون صلاحية CORS (ما بنقدر نستخدمه)"}
+  catch(e2){el.className="s bad";el.innerHTML="❌ ما وصل ("+(e2.name==="AbortError"?"انتهى الوقت":e2.message)+")"}
+ }
+ done++;sum.textContent="انتهى "+done+" من "+T.length+" — شغّال: "+ok;
+});
+</script></body></html>
