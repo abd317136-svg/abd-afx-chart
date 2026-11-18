@@ -30,7 +30,7 @@ small{color:#8b949e}
 </head>
 <body>
 <header>
- <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v21</small><span>XAU/USD</span>
+ <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v23</small><span>XAU/USD</span>
  <span class="price" id="px">--</span>
  <button id="subBtn" class="on">اشتراك شهري</button>
  <button id="admUsers" style="display:none">👥 المشتركين</button><button id="admOut" style="display:none">خروج الأدمن</button>
@@ -66,6 +66,7 @@ fetch("subscribers.json?t="+Date.now()).then(r=>r.json()).then(j=>{SUBS=j;gate()
 const sha=async t=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)))].map(x=>x.toString(16).padStart(2,"0")).join("");
 let PUB=[];
 fetch("drawings.json?t="+Date.now()).then(r=>r.json()).then(j=>{PUB=j;if(localStorage.ab_tk&&!drawings.length)drawings=j;draw()}).catch(()=>{});
+const PROXY="https://abd-candle.abd317136.workers.dev"; /* ضع هنا رابط الـ Worker من كلاودفلير، مثال: https://abd-candles.xxx.workers.dev (بدون / بالآخر) */
 const SYMBOL="PAXGUSDT"; // PAXG مربوط بسعر الذهب (بديل مجاني للسعر الحي)
 /* ================================= */
 const $=id=>document.getElementById(id);
@@ -82,7 +83,7 @@ $("amGo").onclick=async()=>{const t=$("amTk").value.trim();
   if(!r.ok)throw 0;localStorage.ab_tk=t;location.hash="";location.reload()}catch(e){$("amMsg").textContent="Token غير صحيح"}};
 const TFS={ "1m":["1m",60],"5m":["5m",300],"15m":["15m",900],"1h":["1h",3600],"4h":["4h",14400],"1d":["1d",86400]};
 const FREE=["1h"]; let tf="1h", tool=null, drawings=[], cur=null, ws, data=[], loading=false;
-const yearAgo=()=>Date.now()/1000-365*86400;
+const yearAgo=()=>Date.now()/1000-730*86400;
 const isSub=()=>{if(localStorage.ab_tk)return true;const h=localStorage.ab_h,x=SUBS[h];return !!(h&&x&&new Date(x.exp)>new Date())};
 
 const chart=LightweightCharts.createChart($("chart"),{layout:{background:{color:"#0d1117"},textColor:"#c9d1d9"},grid:{vertLines:{color:"#1c2128"},horzLines:{color:"#1c2128"}},timeScale:{timeVisible:true,rightOffset:5},crosshair:{mode:0}});
@@ -93,9 +94,27 @@ new ResizeObserver(()=>{chart.resize($("wrap").clientWidth,$("wrap").clientHeigh
 const IV={by:{"1m":"1","5m":"5","15m":"15","1h":"60","4h":"240","1d":"D"},kr:{"1m":1,"5m":5,"15m":15,"1h":60,"4h":240,"1d":1440}};
 const BN=["https://data-api.binance.vision","https://api.binance.com","https://api1.binance.com"];
 const PROV=[
- {n:"Repo",f:async(tf,end,lim)=>{if(end)return [];
-  const r=await fetch(`data/${tf}.json?t=`+Math.floor(Date.now()/60000));if(!r.ok)throw new Error("HTTP "+r.status);
-  return (await r.json()).map(k=>({time:k[0],open:k[1],high:k[2],low:k[3],close:k[4]}))}},
+ {n:"Repo",f:async(tf,end,lim)=>{
+  const rows=a=>a.map(k=>({time:k[0],open:k[1],high:k[2],low:k[3],close:k[4]}));
+  if(!end){const r=await fetch(`data/${tf}.json?t=`+Math.floor(Date.now()/60000));if(!r.ok)throw new Error("HTTP "+r.status);return rows(await r.json())}
+  /* الأقدم: ملفات شهرية data/<tf>/YYYY-MM.json (القائمة بـ data/index.json) */
+  if(!CHI){try{const r=await fetch("data/index.json?t="+Math.floor(Date.now()/3600000));CHI=r.ok?await r.json():{}}catch(e){CHI={}}}
+  const have=CHI[tf]||[];if(!have.length)return [];
+  const e=new Date(end);let y=e.getUTCFullYear(),m=e.getUTCMonth()+1;
+  for(let i=0;i<30;i++){
+   const key=y+"-"+String(m).padStart(2,"0");
+   if(have.includes(key)){
+    const ck=tf+key;if(!CH[ck]){const r=await fetch(`data/${tf}/${key}.json`);CH[ck]=r.ok?await r.json():[]}
+    const f=CH[ck].filter(k=>k[0]*1000<=end);if(f.length)return rows(f.slice(-lim));
+   }
+   if(--m<1){m=12;y--}
+  }
+  return []}},
+ {n:"Proxy",f:async(tf,end,lim)=>{
+  if(!PROXY)throw new Error("off");
+  const r=await fetch(`${PROXY}/klines?tf=${tf}&limit=${Math.min(lim,1000)}`+(end?`&end=${end}`:""));
+  const j=await r.json();if(!Array.isArray(j))throw new Error(j.error||"bad");
+  return j.map(k=>({time:k[0],open:k[1],high:k[2],low:k[3],close:k[4]}))}},
  {n:"Bybit",f:async(tf,end,lim)=>{
   const j=await(await fetch(`https://api.bybit.com/v5/market/kline?category=linear&symbol=XAUUSDT&interval=${IV.by[tf]}&limit=${lim}`+(end?`&end=${end}`:""))).json();
   if(j.retCode!==0)throw new Error(j.retMsg);
@@ -111,7 +130,7 @@ const PROV=[
   const k=Object.values(j.result).find(Array.isArray);
   return k.map(x=>({time:+x[0],open:+x[1],high:+x[2],low:+x[3],close:+x[4]}))}}
 ];
-let cur2=0;const DIAG={};
+let cur2=0;const DIAG={};let CHI=null;const CH={};
 const TO=(p,ms)=>new Promise((res,rej)=>{const t=setTimeout(()=>rej(new Error("timeout")),ms);p.then(v=>{clearTimeout(t);res(v)},e=>{clearTimeout(t);rej(e)})});
 async function kl(end,lim=1000){
  if(end)return PROV[cur2].f(tf,end,lim);
@@ -126,8 +145,9 @@ async function kl(end,lim=1000){
 /* إذا ملف الريبو قديم (فيه فجوة قبل آخر سعر)، منكمّل الشمعات الناقصة من المصادر الحية */
 async function fresh(d){
  const sec=TFS[tf][1],now=Date.now()/1000;
- if(cur2!==0||!d.length||now-d[d.length-1].time<=sec*2)return d;
- const ps=PROV.slice(1).map(p=>TO(p.f(tf,0,300),5000));
+ if(cur2!==0||!d.length)return d;
+ if(!PROXY&&now-d[d.length-1].time<=sec*2)return d;
+ const ps=PROV.slice(1).map(p=>TO(p.f(tf,0,PROXY?500:300),5000));
  ps.forEach(p=>p.catch(()=>{}));
  for(const p of ps){try{const n=await p;if(n.length)return d.filter(c=>c.time<n[0].time).concat(n)}catch(e){}}
  return d;
@@ -147,12 +167,21 @@ async function more(){
  }catch(e){}loading=false;
 }
 chart.timeScale().subscribeVisibleLogicalRangeChange(r=>{if(r&&r.from<40)more();draw()});
-let timer;
+let timer,ptimer,pxOK=0;
 function live(){
- clearInterval(timer);const mine=tf;
+ clearInterval(timer);clearInterval(ptimer);const mine=tf;
+ if(PROXY)ptimer=setInterval(async()=>{try{
+  if(document.hidden||mine!==tf||!data.length)return;
+  const r=await fetch(`${PROXY}/klines?tf=${mine}&limit=3`);const j=await r.json();
+  if(!Array.isArray(j)||mine!==tf)return;pxOK=Date.now();
+  for(const k of j){const c={time:k[0],open:k[1],high:k[2],low:k[3],close:k[4]},l=data[data.length-1];
+   if(c.time<l.time)continue;if(c.time===l.time)data[data.length-1]=c;else data.push(c);series.update(c)}
+  $("px").textContent=data[data.length-1].close.toFixed(2);
+ }catch(e){}},10000);
  timer=setInterval(async()=>{try{
   const p=+(await(await fetch("https://api.gold-api.com/price/XAU")).json()).price;
   if(mine!==tf||!p||!data.length)return;
+  if(PROXY&&Date.now()-pxOK<30000)return;
   const now=Date.now()/1000,d0=new Date(now*1000),wd=d0.getUTCDay(),hh=d0.getUTCHours();
   $("px").textContent=p.toFixed(2);
   if(wd===6||(wd===5&&hh>=22)||(wd===0&&hh<22))return;
