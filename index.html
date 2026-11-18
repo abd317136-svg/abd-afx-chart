@@ -30,7 +30,7 @@ small{color:#8b949e}
 </head>
 <body>
 <header>
- <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small>v24</small><span>XAU/USD</span>
+ <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small id="ver">v25</small><span>XAU/USD</span>
  <span class="price" id="px">--</span>
  <button id="subBtn" class="on">اشتراك شهري</button>
  <button id="admUsers" style="display:none">👥 المشتركين</button><button id="admOut" style="display:none">خروج الأدمن</button>
@@ -147,7 +147,7 @@ async function kl(end,lim=1000){
  if(end)return older(end,lim);
  const t0=Date.now();
  const ps=PROV.map((p,i)=>TO(p.f(tf,0,lim),i===0?3000:6000).then(d=>{if(!d.length)throw new Error("empty");return d}));
- ps.forEach((p,i)=>p.then(d=>{DIAG[PROV[i].n]="ok n="+d.length+" آخر شمعة قبل "+Math.round(Date.now()/1000-d[d.length-1].time)+"ث ("+(Date.now()-t0)+"ms)"},e=>{DIAG[PROV[i].n]="فشل: "+e.message}));
+ ps.forEach((p,i)=>p.then(d=>{DIAG[PROV[i].n]="ok n="+d.length+" آخر شمعة قبل "+Math.round(Date.now()/1000-d[d.length-1].time)+"ث ("+(Date.now()-t0)+"ms)"},e=>{DIAG[PROV[i].n]="فشل: "+((e&&e.message)||e)}));
  try{const d=await ps[0];cur2=0;return d}catch(e){}
  const rest=ps.slice(1).map((p,i)=>p.then(d=>[i+1,d]));
  try{const [i,d]=await Promise.any(rest);cur2=i;return d}catch(e){throw new Error("no data")}
@@ -180,13 +180,30 @@ async function load(){
  if(mine!==tf)return;
  series.setData(data);chart.timeScale().scrollToRealTime();
  $("px").textContent=data[data.length-1].close.toFixed(2);live();
+ setTimeout(preload,1200);
 }
 async function more(){
- if(loading||!data.length||data[0].time<yearAgo())return;loading=true;
+ if(loading||!data.length||data[0].time<yearAgo())return false;loading=true;let got=false;
  try{const old=await kl(data[0].time*1000-1);
-  if(old.length){const r=chart.timeScale().getVisibleLogicalRange();data=old.concat(data);series.setData(data);
+  if(old.length){const r=chart.timeScale().getVisibleLogicalRange();data=old.concat(data);series.setData(data);got=true;
    if(r)chart.timeScale().setVisibleLogicalRange({from:r.from+old.length,to:r.to+old.length});}
- }catch(e){}loading=false;
+ }catch(e){}loading=false;return got;
+}
+/* تحميل التاريخ تلقائياً بالخلفية: 5m=60 يوم، الباقي لسنتين (1m بيتحمّل لما تسحب) */
+let ptok=0;
+async function preload(){
+ const my=++ptok,mine=tf,ver=$("ver"),days={"1m":0,"5m":60}[tf];
+ const now=Date.now()/1000,stop=days===undefined?yearAgo():now-days*86400;
+ if(!days&&days!==undefined)return;
+ const start=data.length?data[0].time:now;
+ try{
+  while(my===ptok&&mine===tf&&data.length&&data[0].time>stop){
+   if(loading){await new Promise(r=>setTimeout(r,200));continue}
+   if(!(await more()))break;
+   if(ver)ver.textContent="v25 ⏳"+Math.min(99,Math.round((start-data[0].time)/Math.max(1,start-stop)*100))+"%";
+   await new Promise(r=>setTimeout(r,120));
+  }
+ }finally{if(ver&&my===ptok)ver.textContent="v25"}
 }
 chart.timeScale().subscribeVisibleLogicalRangeChange(r=>{if(r&&r.from<40)more();draw()});
 let timer,ptimer,pxOK=0;
