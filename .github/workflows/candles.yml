@@ -1,0 +1,51 @@
+name: update-candles
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      backfill:
+        description: "true = backfill 2 years"
+        default: "false"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: candles
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Update candles
+        run: |
+          if [ "${{ github.event.inputs.backfill }}" = "true" ]; then
+            python Update_candles.py --backfill
+          else
+            python Update_candles.py
+          fi
+
+      - name: Commit
+        run: |
+          git config user.name "candles-bot"
+          git config user.email "candles-bot@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "candles $(date -u +%Y-%m-%d_%H:%M)"
+            git pull --rebase -q
+            git push
+          fi
