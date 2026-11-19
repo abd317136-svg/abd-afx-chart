@@ -30,7 +30,7 @@ small{color:#8b949e}
 </head>
 <body>
 <header>
- <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small id="ver">v25</small><span>XAU/USD</span>
+ <span class="logo">Afx-DrAlan-chart-created-by-Abd⚜️</span><small id="ver">v26</small><span>XAU/USD</span>
  <span class="price" id="px">--</span>
  <button id="subBtn" class="on">اشتراك شهري</button>
  <button id="admUsers" style="display:none">👥 المشتركين</button><button id="admOut" style="display:none">خروج الأدمن</button>
@@ -185,8 +185,10 @@ async function load(){
 async function more(){
  if(loading||!data.length||data[0].time<yearAgo())return false;loading=true;let got=false;
  try{const old=await kl(data[0].time*1000-1);
-  if(old.length){const r=chart.timeScale().getVisibleLogicalRange();data=old.concat(data);series.setData(data);got=true;
-   if(r)chart.timeScale().setVisibleLogicalRange({from:r.from+old.length,to:r.to+old.length});}
+  if(old.length){const ts=chart.timeScale(),sp=ts.scrollPosition(),rt=ts.getVisibleRange();
+   data=old.concat(data);series.setData(data);got=true;
+   /* إذا كنت عند آخر شمعة، ضلّك عندها. وإلا ثبّت نفس الفترة الزمنية الي كنت تشوفها */
+   if(sp>-2)ts.scrollToRealTime();else if(rt)ts.setVisibleRange(rt);}
  }catch(e){}loading=false;return got;
 }
 /* تحميل التاريخ تلقائياً بالخلفية: 5m=60 يوم، الباقي لسنتين (1m بيتحمّل لما تسحب) */
@@ -200,10 +202,10 @@ async function preload(){
   while(my===ptok&&mine===tf&&data.length&&data[0].time>stop){
    if(loading){await new Promise(r=>setTimeout(r,200));continue}
    if(!(await more()))break;
-   if(ver)ver.textContent="v25 ⏳"+Math.min(99,Math.round((start-data[0].time)/Math.max(1,start-stop)*100))+"%";
+   if(ver)ver.textContent="v26 ⏳"+Math.min(99,Math.round((start-data[0].time)/Math.max(1,start-stop)*100))+"%";
    await new Promise(r=>setTimeout(r,120));
   }
- }finally{if(ver&&my===ptok)ver.textContent="v25"}
+ }finally{if(ver&&my===ptok)ver.textContent="v26"}
 }
 chart.timeScale().subscribeVisibleLogicalRangeChange(r=>{if(r&&r.from<40)more();draw()});
 let timer,ptimer,pxOK=0;
