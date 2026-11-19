@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>فحص مصادر الذهب الفوري</title>
+<style>
+body{background:#0d1117;color:#e6edf3;font:16px -apple-system,Arial,sans-serif;margin:0;padding:14px}
+h1{font-size:18px;margin:0 0 6px}#sum{color:#d4af37;margin:0 0 4px;font-size:15px}#ref{color:#8b949e;margin:0 0 12px;font-size:14px}
+.r{border-bottom:1px solid #222;padding:8px 0;display:flex;gap:8px;align-items:flex-start}
+.n{flex:0 0 120px;font-weight:600}.s{flex:1;word-break:break-all;font-size:14px}
+.ok{color:#3fb950}.warn{color:#d29922}.bad{color:#f85149}small{color:#8b949e;display:block}
+</style></head><body>
+<h1>فحص مصادر الذهب (قريبة من MT5)</h1>
+<div id="sum">جاري الفحص...</div><div id="ref"></div><div id="out"></div>
+<script>
+const last=a=>a[a.length-1];
+const T=[
+["Yahoo XAUUSD=X","https://query1.finance.yahoo.com/v8/finance/chart/XAUUSD=X?interval=1m&range=1d",
+ j=>{const r=j.chart.result[0],c=r.indicators.quote[0].close.filter(x=>x!=null);return [last(c),last(r.timestamp)]}],
+["Yahoo GC=F","https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1m&range=1d",
+ j=>{const r=j.chart.result[0],c=r.indicators.quote[0].close.filter(x=>x!=null);return [last(c),last(r.timestamp)]}],
+["Yahoo query2","https://query2.finance.yahoo.com/v8/finance/chart/XAUUSD=X?interval=1m&range=1d",
+ j=>{const r=j.chart.result[0],c=r.indicators.quote[0].close.filter(x=>x!=null);return [last(c),last(r.timestamp)]}],
+["Gate فيوتشرز XAUT","https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=XAUT_USDT&interval=1m&limit=3",
+ j=>[+last(j).c,last(j).t]],
+["Gate فيوتشرز XAU","https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=XAU_USDT&interval=1m&limit=3",
+ j=>[+last(j).c,last(j).t]],
+["Gate فيوتشرز PAXG","https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=PAXG_USDT&interval=1m&limit=3",
+ j=>[+last(j).c,last(j).t]],
+["Gate سبوت XAUT","https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=XAUT_USDT&interval=1m&limit=3",
+ j=>[+last(j)[2],+last(j)[0]]],
+["Bitget فيوتشرز XAUUSDT","https://api.bitget.com/api/v2/mix/market/candles?symbol=XAUUSDT&productType=USDT-FUTURES&granularity=1m&limit=3",
+ j=>[+last(j.data)[4],Math.floor(+last(j.data)[0]/1000)]],
+["Bitget فيوتشرز XAUTUSDT","https://api.bitget.com/api/v2/mix/market/candles?symbol=XAUTUSDT&productType=USDT-FUTURES&granularity=1m&limit=3",
+ j=>[+last(j.data)[4],Math.floor(+last(j.data)[0]/1000)]],
+["Bitget سبوت XAUT","https://api.bitget.com/api/v2/spot/market/candles?symbol=XAUTUSDT&granularity=1min&limit=3",
+ j=>[+last(j.data)[4],Math.floor(+last(j.data)[0]/1000)]],
+["Bitfinex XAUT","https://api-pub.bitfinex.com/v2/candles/trade:1m:tXAUT:USD/last",
+ j=>[j[2],Math.floor(j[0]/1000)]],
+["MEXC فيوتشرز","https://contract.mexc.com/api/v1/contract/kline/XAUT_USDT?interval=Min1",
+ j=>[last(j.data.close),last(j.data.time)]],
+["BingX XAUT","https://open-api.bingx.com/openApi/swap/v3/quote/klines?symbol=XAUT-USDT&interval=1m&limit=3",
+ j=>[+j.data[0].close,Math.floor(+j.data[0].time/1000)]],
+["Binance فيوتشرز XAU","https://fapi.binance.com/fapi/v1/klines?symbol=XAUUSDT&interval=1m&limit=3",
+ j=>[+last(j)[4],Math.floor(last(j)[0]/1000)]],
+["CoinGecko PAXG","https://api.coingecko.com/api/v3/coins/pax-gold/ohlc?vs_currency=usd&days=1",
+ j=>[last(j)[4],Math.floor(last(j)[0]/1000)]]
+];
+const out=document.getElementById("out"),sum=document.getElementById("sum"),ref=document.getElementById("ref");
+let ok=0,done=0,spot=null;
+const row=n=>{const d=document.createElement("div");d.className="r";d.innerHTML='<div class="n">'+n+'</div><div class="s">...</div>';out.appendChild(d);return d.querySelector(".s")};
+async function go(f,ms){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await f(c.signal)}finally{clearTimeout(t)}}
+fetch("https://api.gold-api.com/price/XAU").then(r=>r.json()).then(j=>{spot=+j.price;ref.textContent="سعر gold-api الحالي: "+spot.toFixed(2)+" (قارنه مع MT5)"}).catch(()=>{});
+const age=t=>{const s=Math.round(Date.now()/1000-t);return s<120?s+"ث":Math.round(s/60)+"د"};
+T.forEach(async([n,u,parse])=>{
+ const el=row(n),t0=Date.now();
+ try{
+  const r=await go(s=>fetch(u,{signal:s,cache:"no-store"}),8000);
+  const txt=await r.text();let info="";
+  try{const [p,t]=parse(JSON.parse(txt));info=p.toFixed(2)+" · آخر شمعة قبل "+age(t)+(spot?" · فرق عن gold-api: "+(p-spot).toFixed(2):"")}catch(e){info="⚠️ رد غير متوقع: "+txt.slice(0,60).replace(/</g,"&lt;")}
+  const good=r.ok&&info.indexOf("⚠️")<0;
+  el.className="s "+(good?"ok":"warn");el.innerHTML=(good?"✅ ":"⚠️ HTTP "+r.status+" ")+(Date.now()-t0)+"ms<small>"+info+"</small>";if(good)ok++;
+ }catch(e){
+  try{await go(s=>fetch(u,{signal:s,mode:"no-cors",cache:"no-store"}),5000);el.className="s warn";el.innerHTML="⚠️ بيوصل بس بدون صلاحية CORS (ما بنقدر نستخدمه)"}
+  catch(e2){el.className="s bad";el.innerHTML="❌ ما وصل ("+(e2.name==="AbortError"?"انتهى الوقت":e2.message)+")"}
+ }
+ done++;sum.textContent="انتهى "+done+" من "+T.length+" — شغّال: "+ok;
+});
+</script></body></html>
