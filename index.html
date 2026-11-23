@@ -94,59 +94,18 @@ new ResizeObserver(()=>{chart.resize($("wrap").clientWidth,$("wrap").clientHeigh
 const IV={by:{"1m":"1","5m":"5","15m":"15","1h":"60","4h":"240","1d":"D"},kr:{"1m":1,"5m":5,"15m":15,"1h":60,"4h":240,"1d":1440}};
 const BN=["https://data-api.binance.vision","https://api.binance.com","https://api1.binance.com"];
 const PROV=[
- {n:"Repo",f:async(tf,end,lim)=>{
-  const rows=a=>a.map(k=>({time:k[0],open:k[1],high:k[2],low:k[3],close:k[4]}));
-  if(!end){const r=await fetch(`data/${tf}.json?t=`+Math.floor(Date.now()/60000));if(!r.ok)throw new Error("HTTP "+r.status);return rows(await r.json())}
-  /* الأقدم: ملفات شهرية data/<tf>/YYYY-MM.json (القائمة بـ data/index.json) */
-  if(!CHI){try{const r=await fetch("data/index.json?t="+Math.floor(Date.now()/3600000));CHI=r.ok?await r.json():{}}catch(e){CHI={}}}
-  const have=CHI[tf]||[];if(!have.length)return [];
-  const e=new Date(end);let y=e.getUTCFullYear(),m=e.getUTCMonth()+1;
-  for(let i=0;i<30;i++){
-   const key=y+"-"+String(m).padStart(2,"0");
-   if(have.includes(key)){
-    const ck=tf+key;if(!CH[ck]){const r=await fetch(`data/${tf}/${key}.json`);CH[ck]=r.ok?await r.json():[]}
-    const f=CH[ck].filter(k=>k[0]*1000<=end);if(f.length)return rows(f.slice(-lim));
-   }
-   if(--m<1){m=12;y--}
-  }
-  return []}},
- {n:"Gate",f:async(tf,end,lim)=>{
-  const sec=TFS[tf][1],n=Math.min(lim,1000),e=Math.floor(end/1000);
-  const q=end?`from=${e-n*sec+1}&to=${e}`:`limit=${n}`;
-  const r=await fetch(`https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=XAUT_USDT&interval=${tf}&${q}`);
-  const j=await r.json();if(!Array.isArray(j))throw new Error(j.message||"bad");
-  return j.map(k=>({time:+k[0],open:+k[5],high:+k[3],low:+k[4],close:+k[2]})).sort((a,b)=>a.time-b.time)}},
- {n:"Bitget",f:async(tf,end,lim)=>{
-  const g={"1m":"1min","5m":"5min","15m":"15min","1h":"1h","4h":"4h","1d":"1day"}[tf];
-  const r=await fetch(`https://api.bitget.com/api/v2/spot/market/candles?symbol=XAUTUSDT&granularity=${g}&limit=${Math.min(lim,1000)}`+(end?`&endTime=${end}`:""));
-  const j=await r.json();if(j.code!=="00000")throw new Error(j.msg||"bad");
-  return j.data.map(k=>({time:Math.floor(+k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4]})).sort((a,b)=>a.time-b.time)}},
  {n:"Proxy",f:async(tf,end,lim)=>{
   if(!PROXY)throw new Error("off");
   const r=await fetch(`${PROXY}/klines?tf=${tf}&limit=${Math.min(lim,1000)}`+(end?`&end=${end}`:""));
   const j=await r.json();if(!Array.isArray(j))throw new Error(j.error||"bad");
-  return j.map(k=>({time:k[0],open:k[1],high:k[2],low:k[3],close:k[4]}))}},
- {n:"Bybit",f:async(tf,end,lim)=>{
-  const j=await(await fetch(`https://api.bybit.com/v5/market/kline?category=linear&symbol=XAUUSDT&interval=${IV.by[tf]}&limit=${lim}`+(end?`&end=${end}`:""))).json();
-  if(j.retCode!==0)throw new Error(j.retMsg);
-  return j.result.list.map(k=>({time:+k[0]/1000,open:+k[1],high:+k[2],low:+k[3],close:+k[4]})).reverse()}},
- {n:"Binance",f:async(tf,end,lim)=>{let err;
-  for(const h of BN){try{const r=await fetch(`${h}/api/v3/klines?symbol=${SYMBOL}&interval=${TFS[tf][0]}&limit=${lim}`+(end?`&endTime=${end}`:""));
-   const j=await r.json();if(!Array.isArray(j))throw new Error(j.msg||"bad");
-   return j.map(k=>({time:k[0]/1000,open:+k[1],high:+k[2],low:+k[3],close:+k[4]}))}catch(e){err=e}}throw err}},
- {n:"Kraken",f:async(tf,end,lim)=>{
-  if(end)return [];
-  const j=await(await fetch(`https://api.kraken.com/0/public/OHLC?pair=PAXGUSD&interval=${IV.kr[tf]}`)).json();
-  if(j.error&&j.error.length)throw new Error(j.error[0]);
-  const k=Object.values(j.result).find(Array.isArray);
-  return k.map(x=>({time:+x[0],open:+x[1],high:+x[2],low:+x[3],close:+x[4]}))}}
+  return j.map(k=>({time:k[0],open:k[1],high:k[2],low:k[3],close:k[4]}))}}
 ];
 let cur2=0;const DIAG={};let CHI=null;const CH={};
 const TO=(p,ms)=>new Promise((res,rej)=>{const t=setTimeout(()=>rej(new Error("timeout")),ms);p.then(v=>{clearTimeout(t);res(v)},e=>{clearTimeout(t);rej(e)})});
 async function kl(end,lim=1000){
  if(end)return older(end,lim);
  const t0=Date.now();
- const ps=PROV.map((p,i)=>TO(p.f(tf,0,lim),i===0?3000:6000).then(d=>{if(!d.length)throw new Error("empty");return d}));
+ const ps=PROV.map((p,i)=>TO(p.f(tf,0,lim),i===0?10000:6000).then(d=>{if(!d.length)throw new Error("empty");return d}));
  ps.forEach((p,i)=>p.then(d=>{DIAG[PROV[i].n]="ok n="+d.length+" آخر شمعة قبل "+Math.round(Date.now()/1000-d[d.length-1].time)+"ث ("+(Date.now()-t0)+"ms)"},e=>{DIAG[PROV[i].n]="فشل: "+((e&&e.message)||e)}));
  try{const d=await ps[0];cur2=0;return d}catch(e){}
  const rest=ps.slice(1).map((p,i)=>p.then(d=>[i+1,d]));
@@ -162,9 +121,7 @@ async function older(end,lim){
 }
 /* آخر الشمعات من أسرع مصدر حي بيفتح عند المستخدم */
 async function recent(t,lim){
- if(good>0){try{const d=await TO(PROV[good].f(t,0,lim),4000);if(d.length)return d}catch(e){}}
- const ps=PROV.slice(1).map((p,i)=>TO(p.f(t,0,lim),5000).then(d=>{if(!d.length)throw 0;good=i+1;return d}));
- try{return await Promise.any(ps)}catch(e){return null}
+ try{const d=await TO(PROV[0].f(t,0,lim),8000);return d.length?d:null}catch(e){return null}
 }
 /* إذا ملف الريبو قديم (فيه فجوة قبل آخر سعر)، منكمّل الشمعات الناقصة من المصادر الحية */
 async function fresh(d){
@@ -217,7 +174,7 @@ function live(){
   for(const c of j){const l=data[data.length-1];
    if(c.time<l.time)continue;if(c.time===l.time)data[data.length-1]=c;else data.push(c);series.update(c)}
   $("px").textContent=data[data.length-1].close.toFixed(2);
- }catch(e){}},10000);
+ }catch(e){}},120000);
  timer=setInterval(async()=>{try{
   const p=+(await(await fetch("https://api.gold-api.com/price/XAU")).json()).price;
   if(mine!==tf||!p||!data.length)return;
